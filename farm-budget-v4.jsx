@@ -670,10 +670,13 @@ export default function App() {
   const tabs = [{ id: "dash", label: "Dashboard" }, { id: "budgets", label: "Crop Budgets" }, ...d.marketingGroups.map(g => ({ id: "mkt_" + g.id, label: g.name })), { id: "tickets", label: "🎫 Grain Tickets" }, { id: "rents", label: "Cash Rents" }];
 
   return <div style={s.app}>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <header style={s.hdr}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 8, background: "linear-gradient(135deg, #D97706, #059669)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#fff" }}>PF</div>
+        <img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 36, height: 36, borderRadius: 8 }} />
         <div><div style={{ fontSize: 18, fontWeight: 700 }}>Precision Farms</div><div style={{ fontSize: 11, color: C.muted, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Crop Budget Dashboard</div></div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
