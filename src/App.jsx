@@ -203,25 +203,25 @@ const fmtK = (n) => "$" + fmt(n / 1000, 0) + "K";
 const C = { bg: "#0F1419", card: "#1A2332", border: "#2F3336", text: "#E7E9EA", muted: "#71767B", green: "#10B981", red: "#EF4444", amber: "#D97706", purple: "#7C3AED" };
 const badge = (color) => ({ display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: color + "22", color, border: `1px solid ${color}44` });
 const s = {
-  app: { fontFamily: "'Source Sans 3','Segoe UI',sans-serif", background: C.bg, color: C.text, minHeight: "100vh" },
-  hdr: { background: "linear-gradient(135deg, #1A2332 0%, #0F1419 100%)", borderBottom: `1px solid ${C.border}`, padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 },
-  nav: { display: "flex", gap: 2, padding: "0 32px", background: C.bg, borderBottom: `1px solid ${C.border}`, overflowX: "auto" },
-  tab: (a) => ({ padding: "14px 20px", cursor: "pointer", fontSize: 14, fontWeight: a ? 700 : 500, color: a ? C.text : C.muted, background: "none", border: "none", borderBottom: `2px solid ${a ? C.amber : "transparent"}`, whiteSpace: "nowrap" }),
-  main: { padding: 32, maxWidth: 1920, margin: "0 auto" },
-  card: { background: C.card, borderRadius: 12, padding: 24, border: `1px solid ${C.border}` },
-  grid: (c) => ({ display: "grid", gridTemplateColumns: `repeat(${c}, 1fr)`, gap: 16 }),
-  title: { fontSize: 18, fontWeight: 700, marginBottom: 16, color: C.text },
-  tbl: { width: "100%", borderCollapse: "separate", borderSpacing: 0, fontSize: 14 },
-  th: { textAlign: "left", padding: "10px 12px", color: C.muted, fontWeight: 600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.card, whiteSpace: "nowrap" },
-  thR: { textAlign: "right", padding: "10px 12px", color: C.muted, fontWeight: 600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.card, whiteSpace: "nowrap" },
-  td: { padding: "8px 12px", borderBottom: `1px solid rgba(47,51,54,0.4)`, color: C.text, fontSize: 13 },
-  tdR: { padding: "8px 12px", borderBottom: `1px solid rgba(47,51,54,0.4)`, textAlign: "right", fontVariantNumeric: "tabular-nums", color: C.text, fontSize: 13 },
-  btn: { padding: "8px 16px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", border: "none" },
+  app: { fontFamily: "'Source Sans 3','Segoe UI',sans-serif", background: C.bg, color: C.text, minHeight: "100vh", fontSize: 15 },
+  hdr: { background: "linear-gradient(135deg, #1A2332 0%, #0F1419 100%)", borderBottom: `1px solid ${C.border}`, padding: "18px 36px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14 },
+  nav: { display: "flex", gap: 2, padding: "0 36px", background: C.bg, borderBottom: `1px solid ${C.border}`, overflowX: "auto" },
+  tab: (a) => ({ padding: "14px 22px", cursor: "pointer", fontSize: 15, fontWeight: a ? 700 : 500, color: a ? C.text : C.muted, background: "none", border: "none", borderBottom: `2px solid ${a ? C.amber : "transparent"}`, whiteSpace: "nowrap" }),
+  main: { padding: 36, maxWidth: 1920, margin: "0 auto" },
+  card: { background: C.card, borderRadius: 12, padding: 28, border: `1px solid ${C.border}` },
+  grid: (c) => ({ display: "grid", gridTemplateColumns: `repeat(${c}, 1fr)`, gap: 18 }),
+  title: { fontSize: 20, fontWeight: 700, marginBottom: 18, color: C.text },
+  tbl: { width: "100%", borderCollapse: "separate", borderSpacing: 0, fontSize: 15 },
+  th: { textAlign: "left", padding: "10px 14px", color: C.muted, fontWeight: 600, fontSize: 13, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.card, whiteSpace: "nowrap" },
+  thR: { textAlign: "right", padding: "10px 14px", color: C.muted, fontWeight: 600, fontSize: 13, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.card, whiteSpace: "nowrap" },
+  td: { padding: "9px 14px", borderBottom: `1px solid rgba(47,51,54,0.4)`, color: C.text, fontSize: 14 },
+  tdR: { padding: "9px 14px", borderBottom: `1px solid rgba(47,51,54,0.4)`, textAlign: "right", fontVariantNumeric: "tabular-nums", color: C.text, fontSize: 14 },
+  btn: { padding: "8px 18px", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", border: "none" },
   btnP: { background: C.amber, color: "#fff" }, btnG: { background: C.border, color: C.muted }, btnD: { background: "#7F1D1D", color: "#FCA5A5" },
-  tog: (a) => ({ padding: "8px 16px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", background: a ? C.amber : C.border, color: a ? "#fff" : C.muted, border: "none" }),
+  tog: (a) => ({ padding: "8px 18px", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", background: a ? C.amber : C.border, color: a ? "#fff" : C.muted, border: "none" }),
 };
 function Stat({ label, value, sub, color }) {
-  return <div style={s.card}><div style={{ fontSize: 12, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600, marginBottom: 6 }}>{label}</div><div style={{ fontSize: 28, fontWeight: 700, color: color || C.text }}>{value}</div>{sub && <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>{sub}</div>}</div>;
+  return <div style={s.card}><div style={{ fontSize: 13, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600, marginBottom: 6 }}>{label}</div><div style={{ fontSize: 32, fontWeight: 700, color: color || C.text }}>{value}</div>{sub && <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>{sub}</div>}</div>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -674,7 +674,7 @@ export default function App() {
     <header style={s.hdr}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 42, height: 42, borderRadius: 8 }} />
-        <div><div style={{ fontSize: 20, fontWeight: 700 }}>Precision Farms</div><div style={{ fontSize: 12, color: C.muted, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Crop Budget Dashboard</div></div>
+        <div><div style={{ fontSize: 22, fontWeight: 700 }}>Precision Farms</div><div style={{ fontSize: 13, color: C.muted, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Crop Budget Dashboard</div></div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ fontSize: 11, color: st.ss==="saved"?C.green:st.ss==="saving"?C.amber:C.red }}>{st.ss==="saved"?"✓ Saved":st.ss==="saving"?"Saving...":"Unsaved"}</div>
