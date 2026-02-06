@@ -1,0 +1,701 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DATA MODEL — fully dynamic, no hardcoded crop/product lists
+// ═══════════════════════════════════════════════════════════════════════════
+function defaultData(year) {
+  return {
+    year,
+    crops: [
+      { id: "c1", name: "Corn", acres: 491, budgetYield: 212, actualYield: null, budgetPrice: 4.404, actualPrice: null, color: "#D97706", seedBag: 80000, seedRate: 32000, seedPrice: 310, marketGroup: "corn", dryingPerBu: 0.06, irrInches: 0 },
+      { id: "c2", name: "IRR Corn", acres: 808, budgetYield: 229, actualYield: null, budgetPrice: 4.404, actualPrice: null, color: "#B45309", seedBag: 80000, seedRate: 33500, seedPrice: 310, marketGroup: "corn", dryingPerBu: 0.06, irrInches: 3.15 },
+      { id: "c3", name: "Non-GMO Beans", acres: 115, budgetYield: 70, actualYield: null, budgetPrice: 14.00, actualPrice: null, color: "#059669", seedBag: 140000, seedRate: 165000, seedPrice: 80, marketGroup: "beans", dryingPerBu: 0.06, irrInches: 0 },
+      { id: "c4", name: "Beans", acres: 862, budgetYield: 70, actualYield: null, budgetPrice: 10.40, actualPrice: null, color: "#10B981", seedBag: 140000, seedRate: 135000, seedPrice: 80, marketGroup: "beans", dryingPerBu: 0, irrInches: 0 },
+      { id: "c5", name: "IRR Beans", acres: 1167, budgetYield: 74, actualYield: null, budgetPrice: 10.40, actualPrice: null, color: "#047857", seedBag: 140000, seedRate: 130000, seedPrice: 80, marketGroup: "beans", dryingPerBu: 0, irrInches: 3.15 },
+      { id: "c6", name: "Amylose", acres: 761, budgetYield: 158, actualYield: null, budgetPrice: 6.643, actualPrice: null, color: "#7C3AED", seedBag: 80000, seedRate: 0, seedPrice: 0, marketGroup: "amylose", dryingPerBu: 0.06, irrInches: 0 },
+    ],
+    incomeItems: [
+      { id: "i1", name: "Government Payments", perAc: 33.10 },
+      { id: "i2", name: "Indemnity Payments", perAc: 0 },
+      { id: "i3", name: "Miscellaneous Income", perAc: 28.36 },
+    ],
+    fertProducts: [
+      { id: "f1", name: "11-52-0", pricePerTon: 750, unit: "/Ton", mult: 1, rates: { c1: 35, c2: 35, c3: 0, c4: 35, c5: 0, c6: 35 } },
+      { id: "f2", name: "NH3", pricePerTon: 610, unit: "/Ton", mult: 1.18, rates: { c1: 170, c2: 170, c3: 0, c4: 0, c5: 0, c6: 130 } },
+      { id: "f3", name: "0-0-60", pricePerTon: 380, unit: "/Ton", mult: 1, rates: { c1: 50, c2: 50, c3: 120, c4: 120, c5: 150, c6: 50 } },
+      { id: "f4", name: "Gypsum", pricePerTon: 240, unit: "/Ton", mult: 1, rates: { c1: 75, c2: 75, c3: 75, c4: 75, c5: 75, c6: 75 } },
+      { id: "f5", name: "Micro Nutrients", pricePerTon: 2800, unit: "/Ton", mult: 1, rates: { c1: 1, c2: 1, c3: 0, c4: 0, c5: 0, c6: 1 } },
+      { id: "f6", name: "UAN", pricePerLb: 0.50, unit: "/Lb N", isPerLb: true, mult: 1, rates: { c1: 0, c2: 60, c3: 0, c4: 0, c5: 0, c6: 0 } },
+      { id: "f7", name: "Urea", pricePerTon: 415, unit: "/Ton", mult: 1, rates: { c1: 0, c2: 20, c3: 0, c4: 0, c5: 0, c6: 0 } },
+      { id: "f8", name: "Manure", pricePerTon: 105, unit: "/Ton", mult: 1, rates: { c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 0 } },
+    ],
+    fertFlats: [
+      { id: "ff1", name: "Lime", total: 250 },
+      { id: "ff2", name: "Foliar Fert", total: 10003 },
+      { id: "ff3", name: "Fert Reconcile", total: 39000 },
+    ],
+    herbPasses: [
+      { id: "h1", name: "Fall Pass Corn", costPerAc: 4, flags: { c1: 1, c2: 1, c3: 0, c4: 0, c5: 0, c6: 1 } },
+      { id: "h2", name: "Pre Pass Corn", costPerAc: 26, flags: { c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 1 } },
+      { id: "h3", name: "Post Pass Corn", costPerAc: 24, flags: { c1: 1, c2: 1, c3: 0, c4: 0, c5: 0, c6: 0.5 } },
+      { id: "h4", name: "Fall Pass Beans", costPerAc: 4, flags: { c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 0 } },
+      { id: "h5", name: "Pre Pass Beans", costPerAc: 35, flags: { c1: 0, c2: 0, c3: 1, c4: 1, c5: 1, c6: 0 } },
+      { id: "h6", name: "Post Pass Beans", costPerAc: 21, flags: { c1: 0, c2: 0, c3: 1, c4: 1, c5: 1, c6: 0 } },
+      { id: "h7", name: "2nd Post Beans", costPerAc: 10, flags: { c1: 0, c2: 0, c3: 1, c4: 1, c5: 1, c6: 0 } },
+      { id: "h8", name: "Post Grass", costPerAc: 27, flags: { c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 0 } },
+    ],
+    herbReconcile: -45000,
+    insectProducts: [
+      { id: "ip1", name: "HeadLine", costPerAc: 28, flags: { c1: 1, c2: 1, c3: 0, c4: 0, c5: 0, c6: 1 } },
+      { id: "ip2", name: "Priaxore + Hero", costPerAc: 18, flags: { c1: 0, c2: 0, c3: 1, c4: 1, c5: 1, c6: 0 } },
+      { id: "ip3", name: "Alfa Guard", costPerAc: 12, flags: { c1: 0, c2: 0, c3: 0, c4: 0, c5: 0, c6: 1 } },
+    ],
+    irrCostPerInch: 9,
+    overheadItems: [
+      { id: "o1", name: "Repairs", total: 298000, group: "Machinery" },
+      { id: "o2", name: "Gas/Fuel/Oil", total: 134500, group: "Machinery" },
+      { id: "o3", name: "Equipment Payments", total: 252992, group: "Machinery" },
+      { id: "o4", name: "Capital Purchase", total: 210000, group: "Machinery" },
+      { id: "o5", name: "Machine Hire", total: 35000, group: "Machinery" },
+      { id: "o6", name: "Fertilizer Application", total: 25000, group: "Machinery" },
+      { id: "o7", name: "Hauling (Amylose)", total: 10000, group: "Machinery", amyloseOnly: true },
+      { id: "o8", name: "Crop Insurance", total: 95000, group: "Insurance" },
+      { id: "o9", name: "General Farm Insurance", total: 49000, group: "Insurance" },
+      { id: "o10", name: "Crop Consulting", total: 25000, group: "Consulting" },
+      { id: "o11", name: "Grid Sampling", total: 7500, group: "Consulting" },
+      { id: "o12", name: "Miscellaneous", total: 63075, group: "Other" },
+      { id: "o13", name: "Cover Crops", total: 15404, group: "Other" },
+      { id: "o14", name: "Vehicle Expense", total: 14000, group: "Other" },
+      { id: "o15", name: "Classes/Meetings", total: 5001, group: "Other" },
+      { id: "o16", name: "Labor", total: 350000, group: "Labor" },
+      { id: "o17", name: "Farm Utilities", total: 16000, group: "Taxes/Util" },
+      { id: "o18", name: "Property Taxes", total: 9500, group: "Taxes/Util" },
+      { id: "o19", name: "Interest on Op Note", total: 155860, group: "Interest" },
+    ],
+    rentPerCrop: { c1: 252.89, c2: 267.47, c3: 252.89, c4: 252.89, c5: 267.47, c6: 252.89 },
+    marketingGroups: [
+      { id: "corn", name: "Corn", cropIds: ["c1","c2"], color: "#D97706" },
+      { id: "beans", name: "Soybeans", cropIds: ["c3","c4","c5"], color: "#10B981" },
+      { id: "amylose", name: "Amylose", cropIds: ["c6"], color: "#7C3AED" },
+    ],
+    contracts: {
+      corn: [
+        { id: 1, desc: "AIO Flex program cost .13 enrolled 12-12-24", delDate: "Dec", units: 25000, cash: 4.10, basis: -0.25, futures: 4.35, delivered: false },
+        { id: 2, desc: "Ag Partners 5-3-24", delDate: "Oct", units: 30000, cash: 4.50, basis: -0.40, futures: 4.90, delivered: false },
+        { id: 3, desc: "Ag Partners 7-10-24 reown 50K at $4.46", delDate: "Oct", units: 70000, cash: 4.17, basis: -0.33, futures: 4.50, delivered: false },
+        { id: 4, desc: "Harvest delivery", delDate: "Oct", units: 165000, cash: 4.50, basis: -0.05, futures: 4.55, delivered: false },
+      ],
+      beans: [
+        { id: 1, desc: "AIO Flex program cost .15 enrolled 12-12-24", delDate: "Nov", units: 20000, cash: 9.10, basis: -0.50, futures: 9.60, delivered: false },
+        { id: 2, desc: "Ag Partners Order", delDate: "Nov", units: 10000, cash: 10.65, basis: -0.25, futures: 10.90, delivered: false },
+        { id: 3, desc: "Ag Partners 10-22-25", delDate: "Nov", units: 8000, cash: 9.80, basis: -0.55, futures: 10.35, delivered: false },
+        { id: 4, desc: "Cargill KC Spot", delDate: "Nov", units: 6145, cash: 9.95, basis: -0.35, futures: 10.30, delivered: false },
+        { id: 5, desc: "Remaining Ag Partners harvest delivery", delDate: "Nov", units: 5557, cash: 9.99, basis: -0.50, futures: 10.49, delivered: false },
+        { id: 6, desc: "Ag Partners order 10-27-25", delDate: "Jan", units: 10000, cash: 10.72, basis: -0.15, futures: 10.87, delivered: false },
+        { id: 7, desc: "Ag Partners order 10-27-26", delDate: "Jan", units: 10000, cash: 11.05, basis: -0.10, futures: 11.15, delivered: false },
+        { id: 8, desc: "Ag Partners", delDate: "Jan", units: 5000, cash: 11.34, basis: -0.15, futures: 11.49, delivered: false },
+        { id: 9, desc: "Ag Partners", delDate: "Jan", units: 65000, cash: 11.45, basis: -0.15, futures: 11.60, delivered: false },
+      ],
+      amylose: [
+        { id: 1, desc: "9-23-24", delDate: "Dec", units: 25000, cash: 6.66, basis: 2.16, futures: 4.50, delivered: false },
+        { id: 2, desc: "Split with Jay", delDate: "Dec", units: 10000, cash: 6.60, basis: 2.14, futures: 4.46, delivered: false },
+      ],
+    },
+    cashRents: [
+      { id: 1, owner: "Amberwell", farm: "Betty North", acres: 143, rentAc: 275, type: "Fixed", bonus: 0 },
+      { id: 2, owner: "Doug", farm: "Dad", acres: 503, rentAc: 190, type: "Base @ 190", bonus: 55 },
+      { id: 3, owner: "Gernon", farm: "G&O", acres: 102, rentAc: 140, type: "Base + 31% share", bonus: 91.58 },
+      { id: 4, owner: "Gernon", farm: "WCG", acres: 244, rentAc: 140, type: "Base + 31% share", bonus: 146.52 },
+      { id: 5, owner: "Gernon", farm: "Stover", acres: 44, rentAc: 140, type: "Base + 31% share", bonus: 132.37 },
+      { id: 6, owner: "J Six", farm: "J Six", acres: 61.1, rentAc: 210, type: "Fixed", bonus: 20 },
+      { id: 7, owner: "Keith", farm: "Hoffmans", acres: 74, rentAc: 190, type: "Base @ 190", bonus: 60 },
+      { id: 8, owner: "Keith", farm: "Twombly", acres: 155, rentAc: 180, type: "Flex Base 165", bonus: 50 },
+      { id: 9, owner: "Keith", farm: "Hupperts", acres: 59, rentAc: 180, type: "Flex Base 180", bonus: 80 },
+      { id: 10, owner: "Keith", farm: "Cashmans", acres: 48, rentAc: 175, type: "Flex Base 175", bonus: 65 },
+      { id: 11, owner: "Keith", farm: "Fergus", acres: 69, rentAc: 200, type: "", bonus: 0 },
+      { id: 12, owner: "Keith", farm: "Kraigs", acres: 40, rentAc: 200, type: "", bonus: 15 },
+      { id: 13, owner: "Keith&Galen", farm: "Rake", acres: 49, rentAc: 220, type: "Base + 32% share", bonus: 30 },
+      { id: 14, owner: "Kings", farm: "Kraigs", acres: 24, rentAc: 200, type: "", bonus: 0 },
+      { id: 15, owner: "Kohl", farm: "Smiths", acres: 143, rentAc: 185, type: "Base @ 185", bonus: 65 },
+      { id: 16, owner: "Kurt", farm: "Kurts", acres: 118, rentAc: 195, type: "Base @ 195", bonus: 55 },
+      { id: 17, owner: "Meyer", farm: "Meyer", acres: 628, rentAc: 290, type: "3yr Fixed 24-26", bonus: 0 },
+      { id: 18, owner: "Paul Shmidgall", farm: "Bettys South", acres: 59, rentAc: 280, type: "Fixed", bonus: 0 },
+      { id: 19, owner: "PF", farm: "Jones", acres: 84, rentAc: 505, type: "Contract for deed", bonus: 0 },
+      { id: 20, owner: "PF", farm: "Bills", acres: 23, rentAc: 311.22, type: "Payment", bonus: 0 },
+      { id: 21, owner: "PF", farm: "Jones 18ac", acres: 17, rentAc: 516.35, type: "Payment", bonus: 0 },
+      { id: 22, owner: "PF", farm: "Pyles", acres: 73, rentAc: 275.74, type: "Payment", bonus: 0 },
+      { id: 23, owner: "Plamann", farm: "Plamann", acres: 215, rentAc: 205, type: "Fixed", bonus: 25 },
+      { id: 24, owner: "Saylor", farm: "Preston", acres: 356, rentAc: 190, type: "Flex Base 190", bonus: 63 },
+      { id: 25, owner: "Saylor", farm: "Giffillian", acres: 121, rentAc: 205, type: "Flex Base 205", bonus: 9 },
+      { id: 26, owner: "Saylor", farm: "Bottom", acres: 62, rentAc: 210, type: "Flex Base 210", bonus: 32 },
+      { id: 27, owner: "Witt", farm: "Witt", acres: 239, rentAc: 230, type: "Fixed", bonus: 0 },
+    ],
+    grainTickets: [],
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CALCULATION ENGINE
+// ═══════════════════════════════════════════════════════════════════════════
+const ta = (d) => d.crops.reduce((s, c) => s + (c.acres || 0), 0);
+const calcSeed = (c) => c.seedRate && c.seedBag ? (c.seedPrice / c.seedBag) * c.seedRate : 0;
+const calcFert = (d, cid) => {
+  const t = ta(d); let total = 0;
+  d.fertProducts.forEach(p => {
+    const lbs = p.rates?.[cid] || 0; if (!lbs) return;
+    const m = p.mult || 1;
+    total += p.isPerLb ? lbs * (p.pricePerLb || 0) : (p.pricePerTon / 2000) * lbs * m;
+  });
+  if (t > 0) d.fertFlats.forEach(f => { total += (f.total || 0) / t; });
+  return total;
+};
+const calcHerb = (d, cid) => {
+  const t = ta(d); 
+  let total = d.herbPasses.reduce((s, p) => s + (p.flags?.[cid] || 0) * p.costPerAc, 0);
+  if (t > 0 && d.herbReconcile) total += (d.herbReconcile || 0) / t;
+  return total;
+};
+const calcInsect = (d, cid) => d.insectProducts.reduce((s, p) => s + (p.flags?.[cid] || 0) * p.costPerAc, 0);
+const calcIrr = (d, c) => (c.irrInches || 0) * (d.irrCostPerInch || 0);
+const calcDrying = (c) => (c.budgetYield || 0) * (c.dryingPerBu || 0);
+
+function calcOverhead(d, cid, group) {
+  const t = ta(d); if (t <= 0) return 0;
+  return d.overheadItems.filter(o => o.group === group && !o.amyloseOnly).reduce((s, o) => s + (o.total || 0), 0) / t;
+}
+function calcAmyloseExtra(d, cid) {
+  const amCrop = d.crops.find(c => c.id === cid);
+  if (!amCrop) return 0;
+  return d.overheadItems.filter(o => o.amyloseOnly).reduce((s, o) => s + (o.total || 0), 0) / (amCrop.acres || 1);
+}
+
+function getLines(d, cid) {
+  const c = d.crops.find(cr => cr.id === cid);
+  const t = ta(d);
+  const machBase = calcOverhead(d, cid, "Machinery");
+  const isAmylose = c?.marketGroup === "amylose";
+  return [
+    { key: "seed", label: "Seed", val: calcSeed(c) },
+    { key: "herb", label: "Herbicide", val: calcHerb(d, cid) },
+    { key: "insect", label: "Insecticide/Fungicide", val: calcInsect(d, cid) },
+    { key: "fert", label: "Fertilizer & Lime", val: calcFert(d, cid) },
+    { key: "consult", label: "Consulting/Sampling", val: calcOverhead(d, cid, "Consulting") },
+    { key: "cropIns", label: "Crop/Gen Insurance", val: calcOverhead(d, cid, "Insurance") },
+    { key: "drying", label: "Drying", val: calcDrying(c) },
+    { key: "misc", label: "Miscellaneous", val: calcOverhead(d, cid, "Other") },
+    { key: "taxes", label: "Taxes/Utilities", val: calcOverhead(d, cid, "Taxes/Util") },
+    { key: "mach", label: "Machinery Expense", val: machBase + (isAmylose ? calcAmyloseExtra(d, cid) : 0) },
+    { key: "labor", label: "Labor", val: calcOverhead(d, cid, "Labor") },
+    { key: "irr", label: "Irrigation", val: calcIrr(d, c) },
+    { key: "rent", label: "Land Charge / Rent", val: d.rentPerCrop?.[cid] || 0 },
+    { key: "interest", label: "Interest on ½ Nonland", val: calcOverhead(d, cid, "Interest") },
+  ];
+}
+const cropIncome = (d, c) => c.budgetYield * c.budgetPrice + d.incomeItems.reduce((s, i) => s + (i.perAc || 0), 0);
+const cropCost = (d, cid) => getLines(d, cid).reduce((s, l) => s + l.val, 0);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FORMATTING & STYLES
+// ═══════════════════════════════════════════════════════════════════════════
+const fmt = (n, dec = 0) => n == null || isNaN(n) ? "—" : Number(n).toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+const fmtD = (n) => n == null || isNaN(n) ? "—" : "$" + fmt(n, 2);
+const fmtK = (n) => "$" + fmt(n / 1000, 0) + "K";
+const C = { bg: "#0F1419", card: "#1A2332", border: "#2F3336", text: "#E7E9EA", muted: "#71767B", green: "#10B981", red: "#EF4444", amber: "#D97706", purple: "#7C3AED" };
+const badge = (color) => ({ display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: color + "22", color, border: `1px solid ${color}44` });
+const s = {
+  app: { fontFamily: "'Source Sans 3','Segoe UI',sans-serif", background: C.bg, color: C.text, minHeight: "100vh" },
+  hdr: { background: "linear-gradient(135deg, #1A2332 0%, #0F1419 100%)", borderBottom: `1px solid ${C.border}`, padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 },
+  nav: { display: "flex", gap: 2, padding: "0 24px", background: C.bg, borderBottom: `1px solid ${C.border}`, overflowX: "auto" },
+  tab: (a) => ({ padding: "12px 16px", cursor: "pointer", fontSize: 13, fontWeight: a ? 700 : 500, color: a ? C.text : C.muted, background: "none", border: "none", borderBottom: `2px solid ${a ? C.amber : "transparent"}`, whiteSpace: "nowrap" }),
+  main: { padding: 24, maxWidth: 1500, margin: "0 auto" },
+  card: { background: C.card, borderRadius: 12, padding: 20, border: `1px solid ${C.border}` },
+  grid: (c) => ({ display: "grid", gridTemplateColumns: `repeat(${c}, 1fr)`, gap: 16 }),
+  title: { fontSize: 16, fontWeight: 700, marginBottom: 16, color: C.text },
+  tbl: { width: "100%", borderCollapse: "separate", borderSpacing: 0, fontSize: 13 },
+  th: { textAlign: "left", padding: "8px 10px", color: C.muted, fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.card, whiteSpace: "nowrap" },
+  thR: { textAlign: "right", padding: "8px 10px", color: C.muted, fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.card, whiteSpace: "nowrap" },
+  td: { padding: "6px 10px", borderBottom: `1px solid rgba(47,51,54,0.4)`, color: C.text, fontSize: 12 },
+  tdR: { padding: "6px 10px", borderBottom: `1px solid rgba(47,51,54,0.4)`, textAlign: "right", fontVariantNumeric: "tabular-nums", color: C.text, fontSize: 12 },
+  btn: { padding: "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none" },
+  btnP: { background: C.amber, color: "#fff" }, btnG: { background: C.border, color: C.muted }, btnD: { background: "#7F1D1D", color: "#FCA5A5" },
+  tog: (a) => ({ padding: "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", background: a ? C.amber : C.border, color: a ? "#fff" : C.muted, border: "none" }),
+};
+function Stat({ label, value, sub, color }) {
+  return <div style={s.card}><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600, marginBottom: 4 }}>{label}</div><div style={{ fontSize: 24, fontWeight: 700, color: color || C.text }}>{value}</div>{sub && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{sub}</div>}</div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EDITABLE CELL
+// ═══════════════════════════════════════════════════════════════════════════
+function E({ value, onSave, dec = 2, prefix = "$", f = "number", style: st = {}, ph = "—" }) {
+  const [ed, setEd] = useState(false);
+  const [dr, setDr] = useState("");
+  const ref = useRef(null);
+  const start = () => { setDr(value != null ? String(value) : ""); setEd(true); };
+  useEffect(() => { if (ed && ref.current) ref.current.focus(); }, [ed]);
+  const commit = () => { setEd(false); if (dr === "") { onSave(f === "text" ? "" : null); return; } if (f === "text") { onSave(dr); return; } const n = parseFloat(dr); if (!isNaN(n)) onSave(n); };
+  if (f === "bool") return <span onClick={() => onSave(!value)} style={{ cursor: "pointer", ...st }}><span style={badge(value ? C.green : C.amber)}>{value ? "Delivered" : "Open"}</span></span>;
+  if (ed) return <input ref={ref} value={dr} onChange={e => setDr(e.target.value)} onBlur={commit} onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEd(false); }} style={{ background: C.bg, border: `1px solid ${C.amber}`, borderRadius: 4, color: C.text, padding: "2px 6px", width: f === "text" ? 180 : 80, fontSize: 13, fontVariantNumeric: "tabular-nums", outline: "none", ...st }} />;
+  let d = ph; if (value != null && value !== "") { if (f === "number") d = prefix + fmt(value, dec); else if (f === "int") d = fmt(value, 0); else d = String(value); }
+  return <span onClick={start} title="Click to edit" style={{ cursor: "pointer", borderBottom: "1px dashed rgba(113,118,123,0.4)", paddingBottom: 1, ...st }}>{d}</span>;
+}
+const Calc = ({ value, dec = 2, prefix = "$", color }) => <span style={{ fontVariantNumeric: "tabular-nums", color: color || C.text }}>{prefix}{fmt(value, dec)}</span>;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COLLAPSIBLE SECTION
+// ═══════════════════════════════════════════════════════════════════════════
+function Sec({ title, emoji, children, btext, open: defOpen = false }) {
+  const [open, setOpen] = useState(defOpen);
+  return <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, marginBottom: 12, overflow: "hidden" }}>
+    <div style={{ padding: "12px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", userSelect: "none" }} onClick={() => setOpen(!open)}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 16 }}>{emoji}</span><span style={{ fontSize: 14, fontWeight: 700 }}>{title}</span>{btext && <span style={badge(C.amber)}>{btext}</span>}</div>
+      <span style={{ color: C.muted, fontSize: 18, transform: open ? "rotate(180deg)" : "none", transition: "0.2s" }}>▾</span>
+    </div>{open && <div style={{ padding: "0 16px 16px", overflowX: "auto" }}>{children}</div>}</div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STORAGE HOOK
+// ═══════════════════════════════════════════════════════════════════════════
+function useStorage() {
+  const [years, setYears] = useState([]); const [yr, setYr] = useState(2025); const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true); const [ss, setSs] = useState("saved"); const tmr = useRef(null);
+  const save = useCallback(async (d) => { setSs("saving"); try { await window.storage.set(`pf:${d.year}`, JSON.stringify(d)); setSs("saved"); } catch { setSs("error"); } }, []);
+  const dsave = useCallback((d) => { setSs("unsaved"); if (tmr.current) clearTimeout(tmr.current); tmr.current = setTimeout(() => save(d), 1200); }, [save]);
+  const loadYrs = useCallback(async () => { try { const r = await window.storage.list("pf:"); if (r?.keys?.length) { const y = r.keys.map(k => parseInt(k.replace("pf:", ""))).filter(y => !isNaN(y)).sort((a, b) => b - a); setYears(y); return y; } } catch {} return []; }, []);
+  const loadYr = useCallback(async (y) => { try { const r = await window.storage.get(`pf:${y}`); if (r?.value) { const p = JSON.parse(r.value); setData(p); setYr(y); return p; } } catch {} const d = defaultData(y); setData(d); setYr(y); return d; }, []);
+  const upd = useCallback((fn) => { setData(prev => { const n = fn(JSON.parse(JSON.stringify(prev))); dsave(n); return n; }); }, [dsave]);
+  const copyYr = useCallback(async (from, to) => { let src; try { const r = await window.storage.get(`pf:${from}`); src = r?.value ? JSON.parse(r.value) : defaultData(from); } catch { src = defaultData(from); } const cp = JSON.parse(JSON.stringify(src)); cp.year = to; cp.crops.forEach(c => { c.actualYield = null; c.actualPrice = null; }); cp.contracts = {}; cp.marketingGroups.forEach(g => { cp.contracts[g.id] = []; }); cp.grainTickets = []; await window.storage.set(`pf:${to}`, JSON.stringify(cp)); setYears(p => [...new Set([to, ...p])].sort((a, b) => b - a)); setData(cp); setYr(to); }, []);
+  useEffect(() => { (async () => { setLoading(true); const y = await loadYrs(); if (y.length) await loadYr(y[0]); else { const d = defaultData(2025); await save(d); setYears([2025]); setData(d); } setLoading(false); })(); }, []);
+  return { years, yr, data, loading, ss, loadYr, upd, copyYr };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════
+function Dash({ d }) {
+  const t = ta(d), tI = d.crops.reduce((a, c) => a + cropIncome(d, c) * c.acres, 0), tC = d.crops.reduce((a, c) => a + cropCost(d, c.id) * c.acres, 0), net = tI - tC;
+  return <div>
+    <div style={{ ...s.grid(4), marginBottom: 24 }}>
+      <Stat label="Total Planted Acres" value={fmt(t, 1)} sub={`${d.crops.length} crop types`} />
+      <Stat label="Projected Gross Income" value={fmtK(tI)} sub={`${fmtD(tI/t)}/ac`} color={C.green} />
+      <Stat label="Total Costs" value={fmtK(tC)} sub={`${fmtD(tC/t)}/ac`} color={C.red} />
+      <Stat label="Net Returns" value={fmtK(net)} sub={`${fmtD(net/t)}/ac`} color={net>=0?C.green:C.red} />
+    </div>
+    <div style={{ ...s.card, marginBottom: 24 }}><div style={s.title}>Crop P&L Summary</div>
+      <table style={s.tbl}><thead><tr><th style={s.th}>Crop</th><th style={s.thR}>Acres</th><th style={s.thR}>Income/ac</th><th style={s.thR}>Cost/ac</th><th style={s.thR}>Return/ac</th><th style={s.thR}>Total Net</th></tr></thead>
+      <tbody>{d.crops.map(c => { const i = cropIncome(d, c), co = cropCost(d, c.id), r = i - co; return <tr key={c.id}><td style={s.td}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 8 }}>{c.name}</span></td><td style={s.tdR}>{fmt(c.acres)}</td><td style={s.tdR}>{fmtD(i)}</td><td style={s.tdR}>{fmtD(co)}</td><td style={{ ...s.tdR, color: r>=0?C.green:C.red, fontWeight: 600 }}>{fmtD(r)}</td><td style={{ ...s.tdR, color: r>=0?C.green:C.red }}>{fmtK(r * c.acres)}</td></tr>; })}</tbody></table>
+    </div>
+    <div style={s.card}><div style={s.title}>Marketing Position</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>{d.marketingGroups.map(g => {
+        const prod = d.crops.filter(c => g.cropIds.includes(c.id)).reduce((a, c) => a + c.acres * c.budgetYield, 0);
+        const con = (d.contracts[g.id] || []).reduce((a, c) => a + c.units, 0);
+        const pct = prod > 0 ? (con / prod) * 100 : 0;
+        return <div key={g.id}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}><span style={{ fontSize: 13, fontWeight: 600 }}>{g.name}</span><span style={{ fontSize: 12, color: C.muted }}>{fmt(con)} / {fmt(prod)} bu ({pct.toFixed(1)}%)</span></div>
+          <div style={{ background: C.border, borderRadius: 6, height: 24, overflow: "hidden" }}><div style={{ width: `${Math.min(pct,100)}%`, height: "100%", background: g.color, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 8, fontSize: 11, fontWeight: 700, color: "#fff" }}>{pct > 8 ? pct.toFixed(0)+"%" : ""}</div></div></div>;
+      })}</div>
+    </div>
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CROP BUDGETS TAB
+// ═══════════════════════════════════════════════════════════════════════════
+function BudgetsTab({ d, upd }) {
+  const u = (fn) => upd(p => { fn(p); return p; }); const t = ta(d);
+  const ci = (idx) => d.crops[idx]?.id;
+  const addCrop = () => u(p => { const nid = "c" + (Date.now() % 100000); p.crops.push({ id: nid, name: "New Crop", acres: 0, budgetYield: 0, actualYield: null, budgetPrice: 0, actualPrice: null, color: "#6B7280", seedBag: 80000, seedRate: 0, seedPrice: 0, marketGroup: "", dryingPerBu: 0, irrInches: 0 }); p.rentPerCrop[nid] = 0; });
+  const delCrop = (idx) => u(p => { const cid = p.crops[idx].id; p.crops.splice(idx, 1); delete p.rentPerCrop[cid]; });
+
+  return <div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+      <div style={s.title}>Budget Summary — {d.year}</div>
+      <div style={{ display: "flex", gap: 8 }}><span style={{ fontSize: 11, color: C.muted, alignSelf: "center" }}>Calculated from inputs below</span><button style={{ ...s.btn, ...s.btnP }} onClick={addCrop}>+ Add Crop</button></div>
+    </div>
+    <div style={{ ...s.card, marginBottom: 16, overflowX: "auto" }}>
+      <table style={s.tbl}><thead><tr><th style={{ ...s.th, minWidth: 160 }}>Line Item</th>
+        {d.crops.map((c, i) => <th key={c.id} style={{ ...s.thR, minWidth: 90 }}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6 }}><E value={c.name} f="text" onSave={v => u(p => { p.crops[i].name = v; })} prefix="" style={{ fontWeight: 600, fontSize: 11 }} /></span></th>)}
+      </tr></thead><tbody>
+        <tr><td style={{ ...s.td, fontWeight: 600 }}>Planted Acres</td>{d.crops.map((c, i) => <td key={c.id} style={s.tdR}><E value={c.acres} onSave={v => u(p => { p.crops[i].acres = v; })} dec={1} prefix="" f="plain" /></td>)}</tr>
+        <tr><td style={{ ...s.td, fontWeight: 600 }}>Seeds/bag</td>{d.crops.map((c, i) => <td key={c.id} style={s.tdR}><E value={c.seedBag} onSave={v => u(p => { p.crops[i].seedBag = v; })} dec={0} prefix="" f="int" /></td>)}</tr>
+        <tr><td style={{ ...s.td, fontWeight: 600 }}>Color</td>{d.crops.map((c, i) => <td key={c.id} style={s.tdR}><input type="color" value={c.color} onChange={e => u(p => { p.crops[i].color = e.target.value; })} style={{ width: 30, height: 20, border: "none", background: "none", cursor: "pointer" }} /></td>)}</tr>
+        <tr><td colSpan={d.crops.length+1} style={{ ...s.td, fontWeight: 700, color: C.green, fontSize: 11, textTransform: "uppercase", padding: "12px 10px 4px" }}>Income</td></tr>
+        <tr><td style={{ ...s.td, paddingLeft: 18 }}>Yield (bu/ac)</td>{d.crops.map((c, i) => <td key={c.id} style={s.tdR}><E value={c.budgetYield} onSave={v => u(p => { p.crops[i].budgetYield = v; })} dec={1} prefix="" f="plain" /></td>)}</tr>
+        <tr><td style={{ ...s.td, paddingLeft: 18 }}>Price/bu</td>{d.crops.map((c, i) => <td key={c.id} style={s.tdR}><E value={c.budgetPrice} onSave={v => u(p => { p.crops[i].budgetPrice = v; })} dec={3} /></td>)}</tr>
+        {d.incomeItems.map((item, ii) => <tr key={item.id}><td style={{ ...s.td, paddingLeft: 18 }}><E value={item.name} f="text" onSave={v => u(p => { p.incomeItems[ii].name = v; })} prefix="" /></td>{d.crops.map(c => <td key={c.id} style={s.tdR}><E value={item.perAc} onSave={v => u(p => { p.incomeItems[ii].perAc = v; })} /></td>)}</tr>)}
+        <tr><td style={{ ...s.td, paddingLeft: 18 }}><button style={{ ...s.btn, ...s.btnG, fontSize: 11, padding: "2px 8px" }} onClick={() => u(p => { p.incomeItems.push({ id: "i" + Date.now(), name: "New Item", perAc: 0 }); })}>+ income item</button></td></tr>
+        <tr style={{ background: "rgba(16,185,129,0.08)" }}><td style={{ ...s.td, fontWeight: 700, color: C.green }}>Total Returns/ac</td>{d.crops.map(c => <td key={c.id} style={{ ...s.tdR, fontWeight: 700, color: C.green }}><Calc value={cropIncome(d, c)} /></td>)}</tr>
+        <tr><td colSpan={d.crops.length+1} style={{ ...s.td, fontWeight: 700, color: C.red, fontSize: 11, textTransform: "uppercase", padding: "14px 10px 4px" }}>Expenses (calculated)</td></tr>
+        {getLines(d, d.crops[0]?.id).map(l => <tr key={l.key}><td style={{ ...s.td, paddingLeft: 18 }}>{l.label}</td>{d.crops.map(c => <td key={c.id} style={s.tdR}><Calc value={getLines(d, c.id).find(x => x.key === l.key)?.val || 0} /></td>)}</tr>)}
+        <tr style={{ background: "rgba(239,68,68,0.08)" }}><td style={{ ...s.td, fontWeight: 700, color: C.red }}>Total Costs/ac</td>{d.crops.map(c => <td key={c.id} style={{ ...s.tdR, fontWeight: 700, color: C.red }}><Calc value={cropCost(d, c.id)} /></td>)}</tr>
+        <tr style={{ background: "rgba(217,119,6,0.1)" }}><td style={{ ...s.td, fontWeight: 700, color: C.amber, fontSize: 14 }}>Returns Over Costs</td>{d.crops.map(c => { const r = cropIncome(d, c) - cropCost(d, c.id); return <td key={c.id} style={{ ...s.tdR, fontWeight: 700, fontSize: 14, color: r>=0?C.green:C.red }}>{fmtD(r)}</td>; })}</tr>
+        <tr><td style={{ ...s.td, color: C.muted }}>Delete crop</td>{d.crops.map((c, i) => <td key={c.id} style={s.tdR}><button onClick={() => { if(confirm(`Delete ${c.name}?`)) delCrop(i); }} style={{ ...s.btn, ...s.btnD, padding: "2px 8px", fontSize: 10 }}>✕</button></td>)}</tr>
+      </tbody></table>
+    </div>
+
+    {/* INPUT SECTIONS */}
+    <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: C.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Input Tables — click to expand</div>
+
+    <Sec title="Seed Inputs" emoji="🌱" btext={`Avg ${fmtD(d.crops.reduce((a,c) => a + calcSeed(c)*c.acres, 0)/t)}/ac`}>
+      <table style={s.tbl}><thead><tr><th style={s.th}>Input</th>{d.crops.map(c => <th key={c.id} style={s.thR}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6 }}>{c.name}</span></th>)}</tr></thead><tbody>
+        <tr><td style={s.td}>Seeding Rate</td>{d.crops.map((c, i) => <td key={c.id} style={s.tdR}><E value={c.seedRate} onSave={v => u(p => { p.crops[i].seedRate = v; })} dec={0} prefix="" f="int" /></td>)}</tr>
+        <tr><td style={s.td}>Seed $/bag</td>{d.crops.map((c, i) => <td key={c.id} style={s.tdR}><E value={c.seedPrice} onSave={v => u(p => { p.crops[i].seedPrice = v; })} /></td>)}</tr>
+        <tr style={{ background: "rgba(217,119,6,0.06)" }}><td style={{ ...s.td, fontWeight: 700, color: C.amber }}>Seed Cost/ac</td>{d.crops.map(c => <td key={c.id} style={{ ...s.tdR, fontWeight: 700, color: C.amber }}><Calc value={calcSeed(c)} /></td>)}</tr>
+      </tbody></table></Sec>
+
+    <Sec title="Fertilizer & Lime" emoji="🧪" btext={`Avg ${fmtD(d.crops.reduce((a,c) => a + calcFert(d,c.id)*c.acres, 0)/t)}/ac`}>
+      <table style={s.tbl}><thead><tr><th style={s.th}>Product</th><th style={s.thR}>Price</th><th style={s.th}>Unit</th><th style={s.thR}>Mult</th>{d.crops.map(c => <th key={c.id} style={s.thR}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6 }}>lbs</span></th>)}<th style={s.th}></th></tr></thead><tbody>
+        {d.fertProducts.map((p, pi) => <tr key={p.id}><td style={s.td}><E value={p.name} f="text" onSave={v => u(x => { x.fertProducts[pi].name = v; })} prefix="" /></td>
+          <td style={s.tdR}><E value={p.isPerLb ? p.pricePerLb : p.pricePerTon} onSave={v => u(x => { if (p.isPerLb) x.fertProducts[pi].pricePerLb = v; else x.fertProducts[pi].pricePerTon = v; })} /></td>
+          <td style={s.td}><E value={p.unit} f="text" onSave={v => u(x => { x.fertProducts[pi].unit = v; })} prefix="" style={{ fontSize: 11 }} /></td>
+          <td style={s.tdR}><E value={p.mult} onSave={v => u(x => { x.fertProducts[pi].mult = v; })} dec={2} prefix="" f="plain" /></td>
+          {d.crops.map(c => <td key={c.id} style={s.tdR}><E value={p.rates[c.id] || 0} onSave={v => u(x => { x.fertProducts[pi].rates[c.id] = v; })} dec={0} prefix="" f="int" /></td>)}
+          <td style={s.td}><button onClick={() => u(x => { x.fertProducts.splice(pi, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
+        {d.fertFlats.map((f, fi) => <tr key={f.id}><td style={s.td}><E value={f.name} f="text" onSave={v => u(x => { x.fertFlats[fi].name = v; })} prefix="" /><span style={{ fontSize: 10, color: C.muted, marginLeft: 4 }}>(flat)</span></td>
+          <td colSpan={3} style={s.tdR}><E value={f.total} onSave={v => u(x => { x.fertFlats[fi].total = v; })} dec={0} /><span style={{ fontSize: 10, color: C.muted, marginLeft: 4 }}>total</span></td>
+          {d.crops.map(c => <td key={c.id} style={{ ...s.tdR, color: C.muted, fontSize: 11 }}>{t > 0 ? fmtD((f.total || 0) / t) : "—"}</td>)}
+          <td style={s.td}><button onClick={() => u(x => { x.fertFlats.splice(fi, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
+        <tr style={{ background: "rgba(217,119,6,0.06)" }}><td colSpan={4} style={{ ...s.td, fontWeight: 700, color: C.amber }}>Total Fert/ac</td>{d.crops.map(c => <td key={c.id} style={{ ...s.tdR, fontWeight: 700, color: C.amber }}><Calc value={calcFert(d, c.id)} /></td>)}<td></td></tr>
+      </tbody></table>
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}><button style={{ ...s.btn, ...s.btnP }} onClick={() => u(p => { p.fertProducts.push({ id: "f"+Date.now(), name: "New Product", pricePerTon: 0, unit: "/Ton", mult: 1, rates: {} }); })}>+ Product</button><button style={{ ...s.btn, ...s.btnG }} onClick={() => u(p => { p.fertFlats.push({ id: "ff"+Date.now(), name: "New Flat", total: 0 }); })}>+ Flat Total</button></div></Sec>
+
+    <Sec title="Herbicide Passes" emoji="🌿" btext={`Avg ${fmtD(d.crops.reduce((a,c) => a + calcHerb(d,c.id)*c.acres, 0)/t)}/ac`}>
+      <table style={s.tbl}><thead><tr><th style={s.th}>Pass</th><th style={s.thR}>$/ac</th>{d.crops.map(c => <th key={c.id} style={s.thR}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6 }}>Apply</span></th>)}<th></th></tr></thead><tbody>
+        {d.herbPasses.map((p, pi) => <tr key={p.id}><td style={s.td}><E value={p.name} f="text" onSave={v => u(x => { x.herbPasses[pi].name = v; })} prefix="" /></td><td style={s.tdR}><E value={p.costPerAc} onSave={v => u(x => { x.herbPasses[pi].costPerAc = v; })} /></td>
+          {d.crops.map(c => <td key={c.id} style={s.tdR}><E value={p.flags[c.id] || 0} onSave={v => u(x => { x.herbPasses[pi].flags[c.id] = v; })} dec={1} prefix="" f="plain" /></td>)}
+          <td style={s.td}><button onClick={() => u(x => { x.herbPasses.splice(pi, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
+        <tr style={{ background: "rgba(217,119,6,0.06)" }}><td colSpan={2} style={{ ...s.td, fontWeight: 700, color: C.amber }}>Total/ac</td>{d.crops.map(c => <td key={c.id} style={{ ...s.tdR, fontWeight: 700, color: C.amber }}><Calc value={calcHerb(d, c.id)} /></td>)}<td></td></tr>
+      </tbody></table><div style={{ display: "flex", gap: 16, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}><button style={{ ...s.btn, ...s.btnP }} onClick={() => u(p => { p.herbPasses.push({ id: "h"+Date.now(), name: "New Pass", costPerAc: 0, flags: {} }); })}>+ Add Pass</button><span style={{ fontSize: 12, color: C.muted }}>Herb Reconcile (flat $):</span><E value={d.herbReconcile || 0} onSave={v => u(p => { p.herbReconcile = v; })} dec={0} /><span style={{ fontSize: 11, color: C.muted }}>({t > 0 ? fmtD((d.herbReconcile||0)/t) : "—"}/ac)</span></div></Sec>
+
+    <Sec title="Insecticide/Fungicide" emoji="🐛">
+      <table style={s.tbl}><thead><tr><th style={s.th}>Product</th><th style={s.thR}>$/ac</th>{d.crops.map(c => <th key={c.id} style={s.thR}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6 }}>Apply</span></th>)}<th></th></tr></thead><tbody>
+        {d.insectProducts.map((p, pi) => <tr key={p.id}><td style={s.td}><E value={p.name} f="text" onSave={v => u(x => { x.insectProducts[pi].name = v; })} prefix="" /></td><td style={s.tdR}><E value={p.costPerAc} onSave={v => u(x => { x.insectProducts[pi].costPerAc = v; })} /></td>
+          {d.crops.map(c => <td key={c.id} style={s.tdR}><E value={p.flags[c.id] || 0} onSave={v => u(x => { x.insectProducts[pi].flags[c.id] = v; })} dec={0} prefix="" f="int" /></td>)}
+          <td style={s.td}><button onClick={() => u(x => { x.insectProducts.splice(pi, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
+        <tr style={{ background: "rgba(217,119,6,0.06)" }}><td colSpan={2} style={{ ...s.td, fontWeight: 700, color: C.amber }}>Total/ac</td>{d.crops.map(c => <td key={c.id} style={{ ...s.tdR, fontWeight: 700, color: C.amber }}><Calc value={calcInsect(d, c.id)} /></td>)}<td></td></tr>
+      </tbody></table><button style={{ ...s.btn, ...s.btnP, marginTop: 8 }} onClick={() => u(p => { p.insectProducts.push({ id: "ip"+Date.now(), name: "New Product", costPerAc: 0, flags: {} }); })}>+ Add Product</button></Sec>
+
+    <Sec title="Irrigation & Drying" emoji="💧">
+      <table style={s.tbl}><thead><tr><th style={s.th}>Input</th>{d.crops.map(c => <th key={c.id} style={s.thR}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6 }}>{c.name}</span></th>)}</tr></thead><tbody>
+        <tr><td style={s.td}>Irr Inches: <E value={d.irrCostPerInch} onSave={v => u(p => { p.irrCostPerInch = v; })} /> /in</td>{d.crops.map((c, i) => <td key={c.id} style={s.tdR}><E value={c.irrInches} onSave={v => u(p => { p.crops[i].irrInches = v; })} dec={1} prefix="" f="plain" /> → <Calc value={calcIrr(d, c)} /></td>)}</tr>
+        <tr><td style={s.td}>Drying $/bu</td>{d.crops.map((c, i) => <td key={c.id} style={s.tdR}><E value={c.dryingPerBu} onSave={v => u(p => { p.crops[i].dryingPerBu = v; })} dec={3} /> → <Calc value={calcDrying(c)} /></td>)}</tr>
+      </tbody></table></Sec>
+
+    <Sec title="Fixed Overhead" emoji="🏗️" btext={`$${fmt(d.overheadItems.reduce((a,o) => a + (o.total||0), 0))} total`}>
+      <table style={s.tbl}><thead><tr><th style={s.th}>Group</th><th style={s.th}>Item</th><th style={s.thR}>Total $</th><th style={s.thR}>$/ac</th><th></th></tr></thead><tbody>
+        {d.overheadItems.map((o, oi) => <tr key={o.id}>
+          <td style={s.td}><E value={o.group} f="text" onSave={v => u(p => { p.overheadItems[oi].group = v; })} prefix="" style={{ fontSize: 11, color: C.amber }} /></td>
+          <td style={s.td}><E value={o.name} f="text" onSave={v => u(p => { p.overheadItems[oi].name = v; })} prefix="" /></td>
+          <td style={s.tdR}><E value={o.total} onSave={v => u(p => { p.overheadItems[oi].total = v; })} dec={0} /></td>
+          <td style={{ ...s.tdR, color: C.muted }}>{o.amyloseOnly ? fmtD(o.total / (d.crops.find(c => c.marketGroup === "amylose")?.acres || 1)) + " (amylose)" : t > 0 ? fmtD(o.total / t) : "—"}</td>
+          <td style={s.td}><button onClick={() => u(p => { p.overheadItems.splice(oi, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
+      </tbody></table><button style={{ ...s.btn, ...s.btnP, marginTop: 8 }} onClick={() => u(p => { p.overheadItems.push({ id: "o"+Date.now(), name: "New Item", total: 0, group: "Other" }); })}>+ Add Item</button>
+      <div style={{ marginTop: 16, fontWeight: 700, fontSize: 13 }}>Rent per Crop ($/ac)</div>
+      <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>{d.crops.map((c, i) => <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6, fontSize: 12 }}>{c.name}:</span><E value={d.rentPerCrop[c.id]} onSave={v => u(p => { p.rentPerCrop[c.id] = v; })} /></div>)}</div></Sec>
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MARKETING TAB
+// ═══════════════════════════════════════════════════════════════════════════
+function MktTab({ d, upd, gid }) {
+  const g = d.marketingGroups.find(m => m.id === gid); if (!g) return null;
+  const u = (fn) => upd(p => { fn(p); return p; });
+  const cts = d.contracts[gid] || []; const prod = d.crops.filter(c => g.cropIds.includes(c.id)).reduce((a, c) => a + c.acres * c.budgetYield, 0);
+  const tU = cts.reduce((a, c) => a + c.units, 0), tD = cts.reduce((a, c) => a + c.units * c.cash, 0), pct = prod > 0 ? (tU/prod)*100 : 0;
+  let bal = prod;
+  return <div>
+    <div style={s.title}>{g.name} Marketing Plan</div>
+    <div style={{ ...s.grid(4), marginBottom: 24 }}><Stat label="Production" value={fmt(prod)+" bu"} /><Stat label="Contracted" value={fmt(tU)+" bu"} sub={`${pct.toFixed(1)}% sold`} color={g.color} /><Stat label="Avg Price" value={tU>0?fmtD(tD/tU):"—"} /><Stat label="Revenue" value={fmtK(tD)} sub={`Rem: ${fmt(prod-tU)} bu`} /></div>
+    <div style={s.card}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}><span style={{ fontWeight: 600 }}>Contracts</span><button style={{ ...s.btn, ...s.btnP }} onClick={() => u(p => { if(!p.contracts[gid]) p.contracts[gid]=[]; const mx = p.contracts[gid].reduce((m,c)=>Math.max(m,c.id),0); p.contracts[gid].push({id:mx+1,desc:"New",delDate:"",units:0,cash:0,basis:0,futures:0,delivered:false}); })}>+ Add</button></div>
+    <table style={s.tbl}><thead><tr><th style={s.th}>#</th><th style={{ ...s.th, minWidth: 200 }}>Description</th><th style={s.th}>Del.</th><th style={s.thR}>Units</th><th style={s.thR}>Cash</th><th style={s.thR}>Basis</th><th style={s.thR}>Futures</th><th style={s.thR}>$ Amt</th><th style={s.thR}>Balance</th><th style={s.th}>Status</th><th></th></tr></thead><tbody>
+      <tr><td colSpan={8} style={{ ...s.td, color: C.muted }}>Beginning Balance</td><td style={{ ...s.tdR, fontWeight: 600, color: g.color }}>{fmt(prod)}</td><td colSpan={2}></td></tr>
+      {cts.map((c, i) => { bal -= c.units; return <tr key={c.id}><td style={{ ...s.td, color: C.muted }}>{c.id}</td><td style={s.td}><E value={c.desc} f="text" onSave={v => u(p => { p.contracts[gid][i].desc = v; })} prefix="" /></td><td style={s.td}><E value={c.delDate} f="text" onSave={v => u(p => { p.contracts[gid][i].delDate = v; })} prefix="" /></td><td style={s.tdR}><E value={c.units} f="int" onSave={v => u(p => { p.contracts[gid][i].units = v; })} prefix="" /></td><td style={s.tdR}><E value={c.cash} onSave={v => u(p => { p.contracts[gid][i].cash = v; })} dec={3} /></td><td style={{ ...s.tdR, color: c.basis<0?C.red:C.green }}><E value={c.basis} onSave={v => u(p => { p.contracts[gid][i].basis = v; })} dec={3} /></td><td style={s.tdR}><E value={c.futures} onSave={v => u(p => { p.contracts[gid][i].futures = v; })} dec={3} /></td><td style={s.tdR}>{fmtK(c.units*c.cash)}</td><td style={{ ...s.tdR, fontWeight: 600 }}>{fmt(bal)}</td><td style={s.td}><E value={c.delivered} f="bool" onSave={v => u(p => { p.contracts[gid][i].delivered = v; })} /></td><td style={s.td}><button onClick={() => u(p => { p.contracts[gid].splice(i, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>; })}
+    </tbody></table></div></div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GRAIN TICKETS TAB
+// ═══════════════════════════════════════════════════════════════════════════
+// Spreadsheet-style cell: always-visible input, Tab/Enter navigation
+const TCOLS = [
+  { key: "date", label: "Date", w: 100, type: "text", align: "left" },
+  { key: "crop", label: "Crop", w: 90, type: "text", align: "left" },
+  { key: "farm", label: "Farm", w: 120, type: "text", align: "left" },
+  { key: "bushels", label: "Bushels", w: 85, type: "num", dec: 2, align: "right" },
+  { key: "wetWeight", label: "Wet Wt", w: 75, type: "num", dec: 0, align: "right" },
+  { key: "moisture", label: "Moist %", w: 70, type: "num", dec: 2, align: "right" },
+  { key: "testWeight", label: "TW", w: 60, type: "num", dec: 1, align: "right" },
+  { key: "fm", label: "FM %", w: 60, type: "num", dec: 2, align: "right" },
+  { key: "destination", label: "Destination", w: 120, type: "text", align: "left" },
+  { key: "notes", label: "Notes", w: 140, type: "text", align: "left" },
+];
+const cellSt = (focused, align) => ({
+  background: focused ? "#1E2D3D" : C.bg,
+  border: focused ? `2px solid ${C.amber}` : `1px solid ${C.border}`,
+  borderRadius: 3,
+  color: C.text,
+  padding: focused ? "3px 5px" : "4px 6px",
+  width: "100%",
+  fontSize: 12,
+  fontVariantNumeric: "tabular-nums",
+  fontFamily: "'Source Sans 3','Segoe UI',sans-serif",
+  outline: "none",
+  textAlign: align || "left",
+  boxSizing: "border-box",
+});
+
+function TicketsTab({ d, upd }) {
+  const u = (fn) => upd(p => { fn(p); return p; });
+  const [filter, setFilter] = useState("all");
+  const [importMode, setImportMode] = useState(false);
+  const [csvText, setCsvText] = useState("");
+  const [focusCell, setFocusCell] = useState(null); // {row, col}
+  const gridRef = useRef({});  // gridRef.current["r-c"] = input element
+  const fileRef = useRef(null);
+  const tickets = d.grainTickets || [];
+  const filtered = filter === "all" ? tickets : tickets.filter(t => t.crop === filter);
+  const totalBu = filtered.reduce((a, t) => a + (t.dryBushels || t.bushels || 0), 0);
+  const cropGroups = [{ id: "all", name: "All Tickets" }, ...d.marketingGroups];
+
+  const emptyTicket = () => ({ id: Date.now() + Math.random(), date: new Date().toISOString().slice(0, 10), crop: filter === "all" ? "corn" : filter, bushels: 0, wetWeight: 0, moisture: 0, testWeight: 0, fm: 0, dryBushels: 0, farm: "", destination: "", notes: "" });
+
+  const recalcDry = (t) => {
+    t.dryBushels = (t.moisture > 15.5 && t.bushels > 0) ? t.bushels * (1 - (t.moisture - 15.5) * 0.012) : t.bushels;
+  };
+
+  const focusTo = useCallback((row, col) => {
+    setFocusCell({ row, col });
+    setTimeout(() => {
+      const el = gridRef.current[`${row}-${col}`];
+      if (el) { el.focus(); el.select?.(); }
+    }, 0);
+  }, []);
+
+  const handleNav = useCallback((row, col, e) => {
+    const isTab = e.key === "Tab";
+    const isEnter = e.key === "Enter";
+    const isShiftTab = isTab && e.shiftKey;
+    if (!isTab && !isEnter) return;
+    e.preventDefault();
+
+    if (isShiftTab) {
+      // Move backward
+      if (col > 0) { focusTo(row, col - 1); }
+      else if (row > 0) { focusTo(row - 1, TCOLS.length - 1); }
+      return;
+    }
+    if (isTab) {
+      // Move forward in row
+      if (col < TCOLS.length - 1) { focusTo(row, col + 1); }
+      else {
+        // Last column — add new row if on last row, then move to first col of next
+        if (row >= filtered.length - 1) {
+          u(p => { if (!p.grainTickets) p.grainTickets = []; p.grainTickets.push(emptyTicket()); });
+        }
+        setTimeout(() => focusTo(row + 1, 0), 50);
+      }
+      return;
+    }
+    if (isEnter) {
+      // Move down same column, add row if needed
+      if (row >= filtered.length - 1) {
+        u(p => { if (!p.grainTickets) p.grainTickets = []; p.grainTickets.push(emptyTicket()); });
+      }
+      setTimeout(() => focusTo(row + 1, col), 50);
+    }
+  }, [filtered.length, filter, focusTo, u]);
+
+  const updateCell = useCallback((idx, key, rawVal) => {
+    u(p => {
+      const t = p.grainTickets[idx]; if (!t) return;
+      const col = TCOLS.find(c => c.key === key);
+      if (col?.type === "num") { const n = parseFloat(rawVal); t[key] = isNaN(n) ? 0 : n; }
+      else { t[key] = rawVal; }
+      recalcDry(t);
+    });
+  }, [u]);
+
+  // CSV import (same as before)
+  const parseCSV = (text) => {
+    const lines = text.trim().split("\n"); if (lines.length < 2) return;
+    const headers = lines[0].toLowerCase().split(",").map(h => h.trim());
+    const mapping = { date: ["date"], crop: ["crop","commodity"], bushels: ["bushels","bushel","bu","gross bushels"], wetweight: ["wet weight","wetweight","gross weight","gross lbs"], moisture: ["moisture","moist","mst","mc"], testweight: ["test weight","testweight","tw"], fm: ["fm","foreign material"], farm: ["farm","location","field"], destination: ["destination","dest","elevator","delivery"], notes: ["notes","note","comments"] };
+    const colMap = {};
+    headers.forEach((h, i) => { Object.entries(mapping).forEach(([key, aliases]) => { if (aliases.some(a => h.includes(a))) colMap[key] = i; }); });
+    const newTickets = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(",").map(c => c.trim().replace(/^"|"$/g, ""));
+      if (cols.length < 2) continue;
+      const t = { id: Date.now() + i, date: cols[colMap.date] || "", crop: cols[colMap.crop]?.toLowerCase() || "corn", bushels: parseFloat(cols[colMap.bushels]) || 0, wetWeight: parseFloat(cols[colMap.wetweight]) || 0, moisture: parseFloat(cols[colMap.moisture]) || 0, testWeight: parseFloat(cols[colMap.testweight]) || 0, fm: parseFloat(cols[colMap.fm]) || 0, farm: cols[colMap.farm] || "", destination: cols[colMap.destination] || "", notes: cols[colMap.notes] || "" };
+      recalcDry(t); newTickets.push(t);
+    }
+    return newTickets;
+  };
+  const handleImport = () => { const nt = parseCSV(csvText); if (nt?.length) { u(p => { if (!p.grainTickets) p.grainTickets = []; p.grainTickets.push(...nt); }); setImportMode(false); setCsvText(""); } };
+  const handleFile = (e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { setCsvText(ev.target.result); }; r.readAsText(f); };
+
+  const addAndFocus = () => {
+    u(p => { if (!p.grainTickets) p.grainTickets = []; p.grainTickets.push(emptyTicket()); });
+    setTimeout(() => focusTo(filtered.length, 0), 50);
+  };
+
+  return <div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+      <div style={s.title}>Grain Tickets — {d.year}</div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button style={{ ...s.btn, ...s.btnG }} onClick={() => setImportMode(!importMode)}>📥 Import CSV</button>
+        <button style={{ ...s.btn, ...s.btnP }} onClick={addAndFocus}>+ Add Ticket</button>
+      </div>
+    </div>
+
+    {importMode && <div style={{ ...s.card, marginBottom: 16 }}>
+      <div style={{ fontWeight: 700, marginBottom: 8 }}>Import Grain Tickets from CSV</div>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>CSV headers: Date, Crop, Bushels, Wet Weight, Moisture, Test Weight, FM, Farm, Destination, Notes</div>
+      <input ref={fileRef} type="file" accept=".csv,.txt" onChange={handleFile} style={{ marginBottom: 8, fontSize: 12, color: C.muted }} />
+      <textarea value={csvText} onChange={e => setCsvText(e.target.value)} placeholder="Or paste CSV data here..." rows={6} style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, padding: 12, color: C.text, fontSize: 12, fontFamily: "monospace", resize: "vertical", outline: "none", boxSizing: "border-box" }} />
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <button style={{ ...s.btn, ...s.btnP }} onClick={handleImport}>Import</button>
+        <button style={{ ...s.btn, ...s.btnG }} onClick={() => { setImportMode(false); setCsvText(""); }}>Cancel</button>
+        {csvText && <span style={{ fontSize: 11, color: C.muted, alignSelf: "center" }}>{csvText.split("\n").length - 1} rows detected</span>}
+      </div>
+    </div>}
+
+    <div style={{ ...s.grid(4), marginBottom: 24 }}>
+      <Stat label="Total Tickets" value={filtered.length} sub={filter !== "all" ? filter : "all crops"} />
+      <Stat label="Total Bushels" value={fmt(totalBu)} color={C.amber} />
+      <Stat label="Unique Farms" value={[...new Set(filtered.map(t => t.farm).filter(Boolean))].length} />
+      <Stat label="Unique Destinations" value={[...new Set(filtered.map(t => t.destination).filter(Boolean))].length} />
+    </div>
+
+    <div style={{ display: "flex", gap: 4, marginBottom: 16, background: C.border, borderRadius: 8, padding: 4, width: "fit-content" }}>
+      {cropGroups.map(g => <button key={g.id} style={s.tog(filter === g.id)} onClick={() => setFilter(g.id)}>{g.name}</button>)}
+    </div>
+
+    <div style={{ ...s.card, padding: 12 }}>
+      <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>
+        <strong>Tab</strong> → next cell &nbsp;|&nbsp; <strong>Enter</strong> → move down &nbsp;|&nbsp; <strong>Shift+Tab</strong> → previous cell &nbsp;|&nbsp; Tab past last cell adds a new row
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ ...s.tbl, borderCollapse: "collapse" }}>
+          <thead><tr>
+            <th style={{ ...s.th, width: 30, padding: "6px 4px" }}>#</th>
+            {TCOLS.map(col => <th key={col.key} style={{ ...s.th, width: col.w, textAlign: col.align, padding: "6px 4px" }}>{col.label}</th>)}
+            <th style={{ ...s.th, width: 55, textAlign: "right", padding: "6px 4px" }}>Dry Bu</th>
+            <th style={{ ...s.th, width: 30 }}></th>
+          </tr></thead>
+          <tbody>
+            {filtered.length === 0 && <tr><td colSpan={TCOLS.length + 3} style={{ ...s.td, textAlign: "center", color: C.muted, padding: 32 }}>Click "+ Add Ticket" or press Tab to start entering tickets</td></tr>}
+            {filtered.map((t, ri) => {
+              const idx = tickets.indexOf(t);
+              const isFocusRow = focusCell?.row === ri;
+              return <tr key={t.id} style={{ background: isFocusRow ? "rgba(217,119,6,0.04)" : "transparent" }}>
+                <td style={{ ...s.td, color: C.muted, fontSize: 10, padding: "2px 4px", textAlign: "center" }}>{ri + 1}</td>
+                {TCOLS.map((col, ci) => {
+                  const isFocused = focusCell?.row === ri && focusCell?.col === ci;
+                  const val = t[col.key];
+                  return <td key={col.key} style={{ padding: "1px 2px", borderBottom: `1px solid rgba(47,51,54,0.3)` }}>
+                    <input
+                      ref={el => { gridRef.current[`${ri}-${ci}`] = el; }}
+                      value={val != null ? String(val) : ""}
+                      onChange={e => updateCell(idx, col.key, e.target.value)}
+                      onFocus={() => setFocusCell({ row: ri, col: ci })}
+                      onKeyDown={e => handleNav(ri, ci, e)}
+                      style={cellSt(isFocused, col.align)}
+                    />
+                  </td>;
+                })}
+                <td style={{ ...s.tdR, fontWeight: 600, color: C.amber, padding: "2px 6px", fontSize: 12, whiteSpace: "nowrap" }}>{fmt(t.dryBushels || t.bushels, 1)}</td>
+                <td style={{ padding: "2px 2px" }}><button onClick={() => u(p => { p.grainTickets.splice(idx, 1); })} style={{ ...s.btn, ...s.btnD, padding: "1px 5px", fontSize: 10 }}>✕</button></td>
+              </tr>;
+            })}
+            {filtered.length > 0 && <tr style={{ background: "rgba(217,119,6,0.08)" }}>
+              <td style={{ ...s.td, fontWeight: 700, color: C.amber, padding: "6px 4px" }}></td>
+              <td colSpan={2} style={{ ...s.td, fontWeight: 700, color: C.amber, padding: "6px 4px" }}>TOTAL ({filtered.length})</td>
+              <td style={{ ...s.tdR, fontWeight: 700, padding: "6px 4px" }}>{fmt(filtered.reduce((a,t) => a + (t.bushels||0), 0), 1)}</td>
+              <td colSpan={6}></td>
+              <td style={{ ...s.tdR, fontWeight: 700, color: C.amber, padding: "6px 4px" }}>{fmt(totalBu, 1)}</td>
+              <td></td>
+            </tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {/* Farm summary */}
+    {filtered.length > 0 && <div style={{ ...s.card, marginTop: 16 }}>
+      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12 }}>By Farm</div>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        {[...new Set(filtered.map(t => t.farm).filter(Boolean))].sort().map(farm => {
+          const farmTickets = filtered.filter(t => t.farm === farm);
+          const farmBu = farmTickets.reduce((a, t) => a + (t.dryBushels || t.bushels || 0), 0);
+          const owner = d.cashRents.find(r => r.farm === farm)?.owner || "";
+          return <div key={farm} style={{ background: C.bg, borderRadius: 8, padding: "8px 14px", border: `1px solid ${C.border}`, minWidth: 120 }}>
+            <div style={{ fontWeight: 700, fontSize: 13 }}>{farm}</div>
+            {owner && <div style={{ fontSize: 11, color: C.muted }}>{owner}</div>}
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.amber, marginTop: 4 }}>{fmt(farmBu)} bu</div>
+            <div style={{ fontSize: 11, color: C.muted }}>{farmTickets.length} tickets</div>
+          </div>;
+        })}
+      </div>
+    </div>}
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CASH RENTS TAB
+// ═══════════════════════════════════════════════════════════════════════════
+function RentsTab({ d, upd }) {
+  const u = (fn) => upd(p => { fn(p); return p; }); const r = d.cashRents || [];
+  const tAc = r.reduce((a,r) => a + r.acres, 0), tB = r.reduce((a,r) => a + r.rentAc*r.acres, 0), tBn = r.reduce((a,r) => a + (r.rentAc+r.bonus)*r.acres, 0);
+  return <div><div style={s.title}>Cash Rents — {d.year}</div>
+    <div style={{ ...s.grid(4), marginBottom: 24 }}><Stat label="Total Rented Acres" value={fmt(tAc, 1)} sub={`${r.length} farms`} /><Stat label="Total Base" value={"$"+fmt(tB)} sub={`Avg ${fmtD(tAc>0?tB/tAc:0)}/ac`} /><Stat label="w/ Bonus" value={"$"+fmt(tBn)} color={C.amber} /><Stat label="Bonus Exposure" value={"$"+fmt(tBn-tB)} color={C.red} /></div>
+    <div style={s.card}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}><span style={{ fontWeight: 600 }}>All Leases</span><button style={{ ...s.btn, ...s.btnP }} onClick={() => u(p => { const mx = p.cashRents.reduce((m,r)=>Math.max(m,r.id),0); p.cashRents.push({id:mx+1,owner:"New",farm:"Farm",acres:0,rentAc:0,type:"",bonus:0}); })}>+ Add</button></div>
+    <div style={{ overflowX: "auto" }}><table style={s.tbl}><thead><tr><th style={s.th}>Owner</th><th style={s.th}>Farm</th><th style={s.thR}>Acres</th><th style={s.thR}>Rent/ac</th><th style={s.thR}>Base</th><th style={s.th}>Type</th><th style={s.thR}>Bonus</th><th style={s.thR}>w/ Bonus</th><th></th></tr></thead><tbody>
+      {r.map((r, i) => <tr key={r.id}><td style={{ ...s.td, fontWeight: 600 }}><E value={r.owner} f="text" onSave={v => u(p => { p.cashRents[i].owner = v; })} prefix="" /></td><td style={s.td}><E value={r.farm} f="text" onSave={v => u(p => { p.cashRents[i].farm = v; })} prefix="" /></td><td style={s.tdR}><E value={r.acres} onSave={v => u(p => { p.cashRents[i].acres = v; })} dec={1} prefix="" f="plain" /></td><td style={s.tdR}><E value={r.rentAc} onSave={v => u(p => { p.cashRents[i].rentAc = v; })} /></td><td style={s.tdR}>{"$"+fmt(r.rentAc*r.acres)}</td><td style={s.td}><E value={r.type} f="text" onSave={v => u(p => { p.cashRents[i].type = v; })} prefix="" /></td><td style={s.tdR}><E value={r.bonus} onSave={v => u(p => { p.cashRents[i].bonus = v; })} /></td><td style={{ ...s.tdR, fontWeight: 600, color: C.amber }}>{"$"+fmt((r.rentAc+r.bonus)*r.acres)}</td><td style={s.td}><button onClick={() => u(p => { p.cashRents.splice(i, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
+      <tr style={{ background: "rgba(217,119,6,0.08)" }}><td colSpan={2} style={{ ...s.td, fontWeight: 700, color: C.amber }}>TOTAL</td><td style={{ ...s.tdR, fontWeight: 700 }}>{fmt(tAc, 1)}</td><td style={{ ...s.tdR, fontWeight: 700 }}>{tAc>0?fmtD(tB/tAc):"—"}</td><td style={{ ...s.tdR, fontWeight: 700 }}>{"$"+fmt(tB)}</td><td></td><td></td><td style={{ ...s.tdR, fontWeight: 700, color: C.amber }}>{"$"+fmt(tBn)}</td><td></td></tr>
+    </tbody></table></div></div></div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════════════════════════
+export default function App() {
+  const st = useStorage();
+  const [tab, setTab] = useState("dash");
+  const [showYM, setShowYM] = useState(false);
+  const [newYr, setNewYr] = useState("");
+  if (st.loading) return <div style={{ ...s.app, display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><div style={{ textAlign: "center" }}><div style={{ fontSize: 32, fontWeight: 800, color: C.amber }}>PF</div><div style={{ color: C.muted }}>Loading...</div></div></div>;
+  if (!st.data) return null;
+  const d = st.data;
+  const tabs = [{ id: "dash", label: "Dashboard" }, { id: "budgets", label: "Crop Budgets" }, ...d.marketingGroups.map(g => ({ id: "mkt_" + g.id, label: g.name })), { id: "tickets", label: "🎫 Grain Tickets" }, { id: "rents", label: "Cash Rents" }];
+
+  return <div style={s.app}>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <header style={s.hdr}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 36, height: 36, borderRadius: 8 }} />
+        <div><div style={{ fontSize: 18, fontWeight: 700 }}>Precision Farms</div><div style={{ fontSize: 11, color: C.muted, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Crop Budget Dashboard</div></div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ fontSize: 11, color: st.ss==="saved"?C.green:st.ss==="saving"?C.amber:C.red }}>{st.ss==="saved"?"✓ Saved":st.ss==="saving"?"Saving...":"Unsaved"}</div>
+        <div style={{ display: "flex", gap: 4, background: C.border, borderRadius: 8, padding: 4 }}>{st.years.map(yr => <button key={yr} style={s.tog(yr===st.yr)} onClick={() => st.loadYr(yr)}>{yr}</button>)}</div>
+        <button style={{ ...s.btn, ...s.btnP }} onClick={() => { setNewYr(String(st.yr + 1)); setShowYM(true); }}>+ New Year</button>
+      </div>
+    </header>
+    {showYM && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowYM(false)}>
+      <div style={{ ...s.card, width: 380, padding: 32 }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Create New Crop Year</div>
+        <input value={newYr} onChange={e => setNewYr(e.target.value)} style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, padding: "8px 12px", color: C.text, fontSize: 16, outline: "none", boxSizing: "border-box", marginBottom: 12 }} />
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>Copies budgets from <strong style={{ color: C.text }}>{st.yr}</strong>. Contracts and tickets start empty.</div>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button style={{ ...s.btn, ...s.btnG }} onClick={() => setShowYM(false)}>Cancel</button><button style={{ ...s.btn, ...s.btnP }} onClick={async () => { const y = parseInt(newYr); if (!isNaN(y) && y > 2000 && y < 2100) { await st.copyYr(st.yr, y); setShowYM(false); } }}>Create {newYr}</button></div>
+      </div></div>}
+    <nav style={s.nav}>{tabs.map(t => <button key={t.id} style={s.tab(tab===t.id)} onClick={() => setTab(t.id)}>{t.label}</button>)}</nav>
+    <main style={s.main}>
+      {tab === "dash" && <Dash d={d} />}
+      {tab === "budgets" && <BudgetsTab d={d} upd={st.upd} />}
+      {d.marketingGroups.map(g => tab === "mkt_"+g.id && <MktTab key={g.id} d={d} upd={st.upd} gid={g.id} />)}
+      {tab === "tickets" && <TicketsTab d={d} upd={st.upd} />}
+      {tab === "rents" && <RentsTab d={d} upd={st.upd} />}
+    </main>
+  </div>;
+}
