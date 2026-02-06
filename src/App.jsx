@@ -518,6 +518,8 @@ function TicketsTab({ d, upd }) {
   const [sortCol, setSortCol] = useState(null); // TCOLS key or "dryBushels"
   const [sortAsc, setSortAsc] = useState(true);
   const [importStep, setImportStep] = useState(0); // 0=closed, 1=upload, 2=map+preview
+  const [quickAdd, setQuickAdd] = useState(false);
+  const [qaForm, setQaForm] = useState({ date: "", crop: "beans", bushels: "", wetWeight: "", moisture: "", testWeight: "", fm: "", destination: "Cargill KC", farm: "", notes: "" });
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [csvData, setCsvData] = useState([]);
   const [colMapping, setColMapping] = useState({});
@@ -647,6 +649,24 @@ function TicketsTab({ d, upd }) {
     setImportStep(0); setCsvHeaders([]); setCsvData([]); setColMapping({});
   };
   const cancelImport = () => { setImportStep(0); setCsvHeaders([]); setCsvData([]); setColMapping({}); };
+  const qaRefs = useRef({});
+  const qaSubmit = () => {
+    const t = {
+      id: Date.now() + Math.random(),
+      date: qaForm.date, crop: qaForm.crop,
+      bushels: parseFloat(qaForm.bushels) || 0,
+      wetWeight: parseFloat(qaForm.wetWeight) || 0,
+      moisture: parseFloat(qaForm.moisture) || 0,
+      testWeight: parseFloat(qaForm.testWeight) || 0,
+      fm: parseFloat(qaForm.fm) || 0,
+      farm: qaForm.farm, destination: qaForm.destination, notes: qaForm.notes,
+    };
+    recalcDry(t);
+    u(p => { if (!p.grainTickets) p.grainTickets = []; p.grainTickets.push(t); });
+    // Reset number fields but keep date/crop/destination/farm for next ticket
+    setQaForm(prev => ({ ...prev, bushels: "", wetWeight: "", moisture: "", testWeight: "", fm: "", notes: "" }));
+    setTimeout(() => qaRefs.current.bushels?.focus(), 50);
+  };
 
   const addAndFocus = () => {
     u(p => { if (!p.grainTickets) p.grainTickets = []; p.grainTickets.push(emptyTicket()); });
@@ -660,9 +680,61 @@ function TicketsTab({ d, upd }) {
         <button style={{ ...s.btn, ...s.btnG }} onClick={() => importStep ? cancelImport() : setImportStep(1)}>
           {importStep ? "Cancel Import" : "Import CSV"}
         </button>
+        <button style={{ ...s.btn, ...s.btnG }} onClick={() => setQuickAdd(!quickAdd)}>
+          {quickAdd ? "Close Quick Add" : "Quick Add"}
+        </button>
         <button style={{ ...s.btn, ...s.btnP }} onClick={addAndFocus}>+ Add Ticket</button>
       </div>
     </div>
+
+    {/* Quick Add — optimized for punching in paper tickets */}
+    {quickAdd && <div style={{ ...s.card, marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <div style={{ fontSize: 16, fontWeight: 700 }}>Quick Add Ticket</div>
+        <div style={{ fontSize: 13, color: C.muted }}>Enter values from paper ticket, then Save & Next</div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12, marginBottom: 16 }}>
+        {[
+          { key: "date", label: "Date", placeholder: "MM/DD/YY", type: "text" },
+          { key: "crop", label: "Crop", type: "select", options: [["beans","Soybeans"],["corn","Corn"],["amylose","Amylose"]] },
+          { key: "bushels", label: "Net Bushels", placeholder: "981.00", type: "num" },
+          { key: "wetWeight", label: "Gross Weight (lb)", placeholder: "88120", type: "num" },
+          { key: "moisture", label: "Moisture %", placeholder: "11.90", type: "num" },
+          { key: "testWeight", label: "Test Weight", placeholder: "55.5", type: "num" },
+          { key: "fm", label: "FM %", placeholder: "0.2", type: "num" },
+          { key: "destination", label: "Destination", placeholder: "Cargill KC", type: "text" },
+          { key: "farm", label: "Farm", placeholder: "", type: "text" },
+          { key: "notes", label: "Notes", placeholder: "", type: "text" },
+        ].map(f => (
+          <div key={f.key}>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 4, fontWeight: 600, textTransform: "uppercase" }}>{f.label}</div>
+            {f.type === "select" ? (
+              <select
+                value={qaForm[f.key]}
+                onChange={e => setQaForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                style={{ ...selectSt, padding: "10px 12px" }}
+              >
+                {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            ) : (
+              <input
+                ref={el => { qaRefs.current[f.key] = el; }}
+                value={qaForm[f.key]}
+                onChange={e => setQaForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                onKeyDown={e => { if (e.key === "Enter") qaSubmit(); }}
+                placeholder={f.placeholder}
+                style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "10px 12px", fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box", fontVariantNumeric: "tabular-nums" }}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <button style={{ ...s.btn, ...s.btnP, padding: "10px 24px", fontSize: 15 }} onClick={qaSubmit}>Save & Next</button>
+        <button style={{ ...s.btn, ...s.btnG }} onClick={() => setQuickAdd(false)}>Done</button>
+        <div style={{ fontSize: 13, color: C.muted }}>Keeps date/crop/destination for the next ticket</div>
+      </div>
+    </div>}
 
     {/* Step 1: Upload */}
     {importStep === 1 && <div style={{ ...s.card, marginBottom: 20 }}>
