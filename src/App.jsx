@@ -436,7 +436,7 @@ const cellSt = (focused, align) => ({
   color: C.text,
   padding: focused ? "3px 5px" : "4px 6px",
   width: "100%",
-  fontSize: 12,
+  fontSize: 13,
   fontVariantNumeric: "tabular-nums",
   fontFamily: "'Source Sans 3','Segoe UI',sans-serif",
   outline: "none",
@@ -444,11 +444,82 @@ const cellSt = (focused, align) => ({
   boxSizing: "border-box",
 });
 
+// RFC 4180 CSV parser — handles quoted fields with embedded commas
+function parseCSVRows(text) {
+  const rows = []; let row = []; let cell = ""; let inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (ch === '"') { inQ = false; }
+      else { cell += ch; }
+    } else {
+      if (ch === '"') { inQ = true; }
+      else if (ch === ",") { row.push(cell.trim()); cell = ""; }
+      else if (ch === "\n" || (ch === "\r" && text[i + 1] === "\n")) {
+        row.push(cell.trim()); cell = "";
+        if (row.some(c => c)) rows.push(row);
+        row = [];
+        if (ch === "\r") i++;
+      } else { cell += ch; }
+    }
+  }
+  if (cell || row.length) { row.push(cell.trim()); if (row.some(c => c)) rows.push(row); }
+  return rows;
+}
+
+// Auto-detect CSV column → ticket field mapping
+const FIELD_DEFS = [
+  { key: "date", label: "Date", match: ["date"] },
+  { key: "crop", label: "Crop", match: ["commodity", "crop"] },
+  { key: "bushels", label: "Bushels", match: ["net amount", "gross amount", "bushels", "bu"] },
+  { key: "wetWeight", label: "Wet Weight", match: ["gross weight", "wet weight"] },
+  { key: "moisture", label: "Moisture %", match: ["moisture corn", "moisture"] },
+  { key: "testWeight", label: "Test Weight", match: ["test weight"] },
+  { key: "fm", label: "FM %", match: ["bcfm", "foreign material", "fm"] },
+  { key: "farm", label: "Farm", match: ["applied field names", "farm", "field"] },
+  { key: "destination", label: "Destination", match: ["location", "destination"] },
+  { key: "notes", label: "Notes", match: ["reference", "notes", "truck name"] },
+];
+function autoDetectMapping(headers) {
+  const lh = headers.map(h => h.toLowerCase());
+  const mapping = {};
+  FIELD_DEFS.forEach(fd => {
+    // Try each alias in priority order — first alias that hits wins
+    for (const m of fd.match) {
+      const exact = lh.findIndex(h => h === m);
+      if (exact !== -1) { mapping[fd.key] = exact; return; }
+    }
+    for (const m of fd.match) {
+      const partial = lh.findIndex(h => h.includes(m));
+      if (partial !== -1) { mapping[fd.key] = partial; return; }
+    }
+  });
+  return mapping;
+}
+function mapCropName(raw) {
+  const l = (raw || "").toLowerCase();
+  if (l.includes("amylose")) return "amylose";
+  if (l.includes("bean") || l.includes("soy")) return "beans";
+  if (l.includes("corn")) return "corn";
+  return l || "corn";
+}
+const selectSt = {
+  background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6,
+  color: C.text, padding: "8px 12px", fontSize: 13, outline: "none",
+  width: "100%", cursor: "pointer", appearance: "none",
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2371767B' d='M2 4l4 4 4-4'/%3E%3C/svg%3E")`,
+  backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
+};
+
 function TicketsTab({ d, upd }) {
   const u = (fn) => upd(p => { fn(p); return p; });
   const [filter, setFilter] = useState("all");
-  const [importMode, setImportMode] = useState(false);
-  const [csvText, setCsvText] = useState("");
+  const [importStep, setImportStep] = useState(0); // 0=closed, 1=upload, 2=map+preview
+  const [csvHeaders, setCsvHeaders] = useState([]);
+  const [csvData, setCsvData] = useState([]);
+  const [colMapping, setColMapping] = useState({});
+  const [dragOver, setDragOver] = useState(false);
   const [focusCell, setFocusCell] = useState(null); // {row, col}
   const gridRef = useRef({});  // gridRef.current["r-c"] = input element
   const fileRef = useRef(null);
@@ -515,24 +586,56 @@ function TicketsTab({ d, upd }) {
     });
   }, [u]);
 
-  // CSV import (same as before)
-  const parseCSV = (text) => {
-    const lines = text.trim().split("\n"); if (lines.length < 2) return;
-    const headers = lines[0].toLowerCase().split(",").map(h => h.trim());
-    const mapping = { date: ["date"], crop: ["crop","commodity"], bushels: ["bushels","bushel","bu","gross bushels"], wetweight: ["wet weight","wetweight","gross weight","gross lbs"], moisture: ["moisture","moist","mst","mc"], testweight: ["test weight","testweight","tw"], fm: ["fm","foreign material"], farm: ["farm","location","field"], destination: ["destination","dest","elevator","delivery"], notes: ["notes","note","comments"] };
-    const colMap = {};
-    headers.forEach((h, i) => { Object.entries(mapping).forEach(([key, aliases]) => { if (aliases.some(a => h.includes(a))) colMap[key] = i; }); });
-    const newTickets = [];
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(",").map(c => c.trim().replace(/^"|"$/g, ""));
-      if (cols.length < 2) continue;
-      const t = { id: Date.now() + i, date: cols[colMap.date] || "", crop: cols[colMap.crop]?.toLowerCase() || "corn", bushels: parseFloat(cols[colMap.bushels]) || 0, wetWeight: parseFloat(cols[colMap.wetweight]) || 0, moisture: parseFloat(cols[colMap.moisture]) || 0, testWeight: parseFloat(cols[colMap.testweight]) || 0, fm: parseFloat(cols[colMap.fm]) || 0, farm: cols[colMap.farm] || "", destination: cols[colMap.destination] || "", notes: cols[colMap.notes] || "" };
-      recalcDry(t); newTickets.push(t);
-    }
-    return newTickets;
+  // CSV import — multi-step with column mapping
+  const processCSVText = (text) => {
+    const rows = parseCSVRows(text);
+    if (rows.length < 2) return;
+    const headers = rows[0];
+    const data = rows.slice(1);
+    setCsvHeaders(headers);
+    setCsvData(data);
+    setColMapping(autoDetectMapping(headers));
+    setImportStep(2);
   };
-  const handleImport = () => { const nt = parseCSV(csvText); if (nt?.length) { u(p => { if (!p.grainTickets) p.grainTickets = []; p.grainTickets.push(...nt); }); setImportMode(false); setCsvText(""); } };
-  const handleFile = (e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { setCsvText(ev.target.result); }; r.readAsText(f); };
+  const handleFile = (e) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = (ev) => processCSVText(ev.target.result);
+    r.readAsText(f);
+  };
+  const handleDrop = (e) => {
+    e.preventDefault(); setDragOver(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) { const r = new FileReader(); r.onload = (ev) => processCSVText(ev.target.result); r.readAsText(f); }
+  };
+  const buildTickets = () => {
+    return csvData.map((row, i) => {
+      const get = (key) => colMapping[key] != null ? (row[colMapping[key]] || "") : "";
+      const t = {
+        id: Date.now() + i + Math.random(),
+        date: get("date").slice(0, 10),
+        crop: mapCropName(get("crop")),
+        bushels: parseFloat(get("bushels")) || 0,
+        wetWeight: parseFloat(get("wetWeight")) || 0,
+        moisture: parseFloat(get("moisture")) || 0,
+        testWeight: parseFloat(get("testWeight")) || 0,
+        fm: parseFloat(get("fm")) || 0,
+        farm: get("farm"),
+        destination: get("destination"),
+        notes: get("notes"),
+      };
+      recalcDry(t);
+      return t;
+    });
+  };
+  const handleImport = () => {
+    const nt = buildTickets();
+    if (nt.length) {
+      u(p => { if (!p.grainTickets) p.grainTickets = []; p.grainTickets.push(...nt); });
+    }
+    setImportStep(0); setCsvHeaders([]); setCsvData([]); setColMapping({});
+  };
+  const cancelImport = () => { setImportStep(0); setCsvHeaders([]); setCsvData([]); setColMapping({}); };
 
   const addAndFocus = () => {
     u(p => { if (!p.grainTickets) p.grainTickets = []; p.grainTickets.push(emptyTicket()); });
@@ -543,20 +646,94 @@ function TicketsTab({ d, upd }) {
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
       <div style={s.title}>Grain Tickets — {d.year}</div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button style={{ ...s.btn, ...s.btnG }} onClick={() => setImportMode(!importMode)}>📥 Import CSV</button>
+        <button style={{ ...s.btn, ...s.btnG }} onClick={() => importStep ? cancelImport() : setImportStep(1)}>
+          {importStep ? "Cancel Import" : "Import CSV"}
+        </button>
         <button style={{ ...s.btn, ...s.btnP }} onClick={addAndFocus}>+ Add Ticket</button>
       </div>
     </div>
 
-    {importMode && <div style={{ ...s.card, marginBottom: 16 }}>
-      <div style={{ fontWeight: 700, marginBottom: 8 }}>Import Grain Tickets from CSV</div>
-      <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>CSV headers: Date, Crop, Bushels, Wet Weight, Moisture, Test Weight, FM, Farm, Destination, Notes</div>
-      <input ref={fileRef} type="file" accept=".csv,.txt" onChange={handleFile} style={{ marginBottom: 8, fontSize: 12, color: C.muted }} />
-      <textarea value={csvText} onChange={e => setCsvText(e.target.value)} placeholder="Or paste CSV data here..." rows={6} style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, padding: 12, color: C.text, fontSize: 12, fontFamily: "monospace", resize: "vertical", outline: "none", boxSizing: "border-box" }} />
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <button style={{ ...s.btn, ...s.btnP }} onClick={handleImport}>Import</button>
-        <button style={{ ...s.btn, ...s.btnG }} onClick={() => { setImportMode(false); setCsvText(""); }}>Cancel</button>
-        {csvText && <span style={{ fontSize: 11, color: C.muted, alignSelf: "center" }}>{csvText.split("\n").length - 1} rows detected</span>}
+    {/* Step 1: Upload */}
+    {importStep === 1 && <div style={{ ...s.card, marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <div style={{ background: C.amber, color: "#fff", width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700 }}>1</div>
+        <div style={{ fontSize: 16, fontWeight: 700 }}>Upload CSV File</div>
+        <div style={{ fontSize: 13, color: C.muted }}>Supports Ingredion exports and standard CSV formats</div>
+      </div>
+      <div
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        onClick={() => fileRef.current?.click()}
+        style={{
+          border: `2px dashed ${dragOver ? C.amber : C.border}`,
+          borderRadius: 12, padding: "40px 24px", textAlign: "center",
+          cursor: "pointer", transition: "border-color 0.2s, background 0.2s",
+          background: dragOver ? "rgba(217,119,6,0.06)" : "transparent",
+        }}
+      >
+        <div style={{ fontSize: 32, marginBottom: 8, opacity: 0.6 }}>CSV</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>Drop a CSV file here or click to browse</div>
+        <div style={{ fontSize: 13, color: C.muted }}>Columns will be auto-detected and mapped</div>
+        <input ref={fileRef} type="file" accept=".csv,.txt" onChange={handleFile} style={{ display: "none" }} />
+      </div>
+    </div>}
+
+    {/* Step 2: Map columns + Preview */}
+    {importStep === 2 && <div style={{ ...s.card, marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <div style={{ background: C.amber, color: "#fff", width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700 }}>2</div>
+        <div style={{ fontSize: 16, fontWeight: 700 }}>Map Columns</div>
+        <div style={{ fontSize: 13, color: C.muted }}>{csvData.length} rows found in CSV</div>
+      </div>
+
+      {/* Column mapping grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 24, maxWidth: 700 }}>
+        {FIELD_DEFS.map(fd => (
+          <div key={fd.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 110, fontSize: 13, fontWeight: 600, color: C.text, flexShrink: 0 }}>{fd.label}</div>
+            <select
+              value={colMapping[fd.key] ?? ""}
+              onChange={e => setColMapping(prev => ({ ...prev, [fd.key]: e.target.value === "" ? undefined : Number(e.target.value) }))}
+              style={selectSt}
+            >
+              <option value="">— skip —</option>
+              {csvHeaders.map((h, i) => <option key={i} value={i}>{h}</option>)}
+            </select>
+          </div>
+        ))}
+      </div>
+
+      {/* Preview */}
+      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>Preview (first 5 rows)</div>
+      <div style={{ overflowX: "auto", marginBottom: 20 }}>
+        <table style={{ ...s.tbl, fontSize: 13 }}>
+          <thead><tr>
+            {FIELD_DEFS.filter(fd => colMapping[fd.key] != null).map(fd => (
+              <th key={fd.key} style={{ ...s.th, fontSize: 12, padding: "8px 10px" }}>{fd.label}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {csvData.slice(0, 5).map((row, ri) => (
+              <tr key={ri}>
+                {FIELD_DEFS.filter(fd => colMapping[fd.key] != null).map(fd => {
+                  let val = row[colMapping[fd.key]] || "";
+                  if (fd.key === "crop") val = mapCropName(val);
+                  if (fd.key === "date") val = val.slice(0, 10);
+                  return <td key={fd.key} style={{ ...s.td, fontSize: 13, padding: "6px 10px" }}>{val}</td>;
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <button style={{ ...s.btn, ...s.btnP, padding: "10px 24px", fontSize: 15 }} onClick={handleImport}>
+          Import {csvData.length} Tickets
+        </button>
+        <button style={{ ...s.btn, ...s.btnG }} onClick={cancelImport}>Cancel</button>
+        <button style={{ ...s.btn, ...s.btnG }} onClick={() => setImportStep(1)}>Back</button>
       </div>
     </div>}
 
