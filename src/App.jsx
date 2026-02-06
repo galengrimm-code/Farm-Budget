@@ -515,6 +515,8 @@ const selectSt = {
 function TicketsTab({ d, upd }) {
   const u = (fn) => upd(p => { fn(p); return p; });
   const [filter, setFilter] = useState("all");
+  const [sortCol, setSortCol] = useState(null); // TCOLS key or "dryBushels"
+  const [sortAsc, setSortAsc] = useState(true);
   const [importStep, setImportStep] = useState(0); // 0=closed, 1=upload, 2=map+preview
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [csvData, setCsvData] = useState([]);
@@ -524,8 +526,17 @@ function TicketsTab({ d, upd }) {
   const gridRef = useRef({});  // gridRef.current["r-c"] = input element
   const fileRef = useRef(null);
   const tickets = d.grainTickets || [];
-  const filtered = filter === "all" ? tickets : tickets.filter(t => t.crop === filter);
+  const base = filter === "all" ? tickets : tickets.filter(t => t.crop === filter);
+  const filtered = sortCol ? [...base].sort((a, b) => {
+    const col = TCOLS.find(c => c.key === sortCol);
+    let av = sortCol === "dryBushels" ? (a.dryBushels || a.bushels || 0) : a[sortCol];
+    let bv = sortCol === "dryBushels" ? (b.dryBushels || b.bushels || 0) : b[sortCol];
+    if (col?.type === "num" || sortCol === "dryBushels") { av = Number(av) || 0; bv = Number(bv) || 0; }
+    else { av = String(av || "").toLowerCase(); bv = String(bv || "").toLowerCase(); }
+    return av < bv ? (sortAsc ? -1 : 1) : av > bv ? (sortAsc ? 1 : -1) : 0;
+  }) : base;
   const totalBu = filtered.reduce((a, t) => a + (t.dryBushels || t.bushels || 0), 0);
+  const toggleSort = (key) => { if (sortCol === key) { setSortAsc(!sortAsc); } else { setSortCol(key); setSortAsc(true); } };
   const cropGroups = [{ id: "all", name: "All Tickets" }, ...d.marketingGroups];
 
   const emptyTicket = () => ({ id: Date.now() + Math.random(), date: new Date().toISOString().slice(0, 10), crop: filter === "all" ? "corn" : filter, bushels: 0, wetWeight: 0, moisture: 0, testWeight: 0, fm: 0, dryBushels: 0, farm: "", destination: "", notes: "" });
@@ -756,8 +767,8 @@ function TicketsTab({ d, upd }) {
         <table style={{ ...s.tbl, borderCollapse: "collapse" }}>
           <thead><tr>
             <th style={{ ...s.th, width: 30, padding: "6px 4px" }}>#</th>
-            {TCOLS.map(col => <th key={col.key} style={{ ...s.th, width: col.w, textAlign: col.align, padding: "6px 4px" }}>{col.label}</th>)}
-            <th style={{ ...s.th, width: 55, textAlign: "right", padding: "6px 4px" }}>Dry Bu</th>
+            {TCOLS.map(col => <th key={col.key} onClick={() => toggleSort(col.key)} style={{ ...s.th, width: col.w, textAlign: col.align, padding: "6px 4px", cursor: "pointer", userSelect: "none" }}>{col.label}{sortCol === col.key ? (sortAsc ? " ▲" : " ▼") : ""}</th>)}
+            <th onClick={() => toggleSort("dryBushels")} style={{ ...s.th, width: 55, textAlign: "right", padding: "6px 4px", cursor: "pointer", userSelect: "none" }}>Dry Bu{sortCol === "dryBushels" ? (sortAsc ? " ▲" : " ▼") : ""}</th>
             <th style={{ ...s.th, width: 30 }}></th>
           </tr></thead>
           <tbody>
