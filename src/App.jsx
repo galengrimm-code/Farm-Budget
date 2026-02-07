@@ -216,26 +216,55 @@ const fmtD = (n) => n == null || isNaN(n) ? "—" : "$" + fmt(n, 2);
 const fmtK = (n) => "$" + fmt(n / 1000, 0) + "K";
 const C = { bg: "#0F1419", card: "#1A2332", border: "#2F3336", text: "#E7E9EA", muted: "#71767B", green: "#10B981", red: "#EF4444", amber: "#D97706", purple: "#7C3AED" };
 const badge = (color) => ({ display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: color + "22", color, border: `1px solid ${color}44` });
+
+// Responsive hook — sets CSS custom properties based on viewport width
+function useResponsive() {
+  useEffect(() => {
+    const update = () => {
+      const m = window.innerWidth < 768;
+      const r = document.documentElement.style;
+      r.setProperty("--pad-main", m ? "10px" : "42px");
+      r.setProperty("--pad-hdr", m ? "12px 14px" : "20px 42px");
+      r.setProperty("--pad-nav", m ? "0 8px" : "0 42px");
+      r.setProperty("--pad-card", m ? "14px" : "28px");
+      r.setProperty("--pad-cell", m ? "8px 8px" : "14px 18px");
+      r.setProperty("--font-tbl", m ? "14px" : "19px");
+      r.setProperty("--font-th", m ? "11px" : "17px");
+      r.setProperty("--font-td", m ? "14px" : "18px");
+      r.setProperty("--font-tab", m ? "14px" : "17px");
+      r.setProperty("--pad-tab", m ? "12px 12px" : "16px 24px");
+      r.setProperty("--max-w", m ? "100%" : "2200px");
+      r.setProperty("--grid-4", m ? "2" : "4");
+      r.setProperty("--grid-3", m ? "1" : "3");
+      r.setProperty("--hdr-dir", m ? "column" : "row");
+      r.setProperty("--stat-val", m ? "26px" : "36px");
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+}
+
 const s = {
   app: { fontFamily: "'Source Sans 3','Segoe UI',sans-serif", background: C.bg, color: C.text, minHeight: "100vh", fontSize: 17 },
-  hdr: { background: "linear-gradient(135deg, #1A2332 0%, #0F1419 100%)", borderBottom: `1px solid ${C.border}`, padding: "20px 42px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14 },
-  nav: { display: "flex", gap: 2, padding: "0 42px", background: C.bg, borderBottom: `1px solid ${C.border}`, overflowX: "auto" },
-  tab: (a) => ({ padding: "16px 24px", cursor: "pointer", fontSize: 17, fontWeight: a ? 700 : 500, color: a ? C.text : C.muted, background: "none", border: "none", borderBottom: `2px solid ${a ? C.amber : "transparent"}`, whiteSpace: "nowrap" }),
-  main: { padding: 42, maxWidth: 2200, margin: "0 auto" },
-  card: { background: C.card, borderRadius: 12, padding: 28, border: `1px solid ${C.border}` },
-  grid: (c) => ({ display: "grid", gridTemplateColumns: `repeat(${c}, 1fr)`, gap: 18 }),
+  hdr: { background: "linear-gradient(135deg, #1A2332 0%, #0F1419 100%)", borderBottom: `1px solid ${C.border}`, padding: "var(--pad-hdr)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14, flexDirection: "var(--hdr-dir)" },
+  nav: { display: "flex", gap: 2, padding: "var(--pad-nav)", background: C.bg, borderBottom: `1px solid ${C.border}`, overflowX: "auto" },
+  tab: (a) => ({ padding: "var(--pad-tab)", cursor: "pointer", fontSize: "var(--font-tab)", fontWeight: a ? 700 : 500, color: a ? C.text : C.muted, background: "none", border: "none", borderBottom: `2px solid ${a ? C.amber : "transparent"}`, whiteSpace: "nowrap" }),
+  main: { padding: "var(--pad-main)", maxWidth: "var(--max-w)", margin: "0 auto" },
+  card: { background: C.card, borderRadius: 12, padding: "var(--pad-card)", border: `1px solid ${C.border}` },
+  grid: (c) => ({ display: "grid", gridTemplateColumns: c === 4 ? "repeat(var(--grid-4), 1fr)" : c === 3 ? "repeat(var(--grid-3), 1fr)" : `repeat(${c}, 1fr)`, gap: 18 }),
   title: { fontSize: 22, fontWeight: 700, marginBottom: 18, color: C.text },
-  tbl: { width: "100%", borderCollapse: "separate", borderSpacing: 0, fontSize: 19 },
-  th: { textAlign: "left", padding: "14px 18px", color: C.muted, fontWeight: 600, fontSize: 17, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.card, whiteSpace: "nowrap" },
-  thR: { textAlign: "right", padding: "14px 18px", color: C.muted, fontWeight: 600, fontSize: 17, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.card, whiteSpace: "nowrap" },
-  td: { padding: "14px 18px", borderBottom: `1px solid rgba(47,51,54,0.4)`, color: C.text, fontSize: 18 },
-  tdR: { padding: "14px 18px", borderBottom: `1px solid rgba(47,51,54,0.4)`, textAlign: "right", fontVariantNumeric: "tabular-nums", color: C.text, fontSize: 18 },
+  tbl: { width: "100%", borderCollapse: "separate", borderSpacing: 0, fontSize: "var(--font-tbl)" },
+  th: { textAlign: "left", padding: "var(--pad-cell)", color: C.muted, fontWeight: 600, fontSize: "var(--font-th)", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.card, whiteSpace: "nowrap" },
+  thR: { textAlign: "right", padding: "var(--pad-cell)", color: C.muted, fontWeight: 600, fontSize: "var(--font-th)", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.card, whiteSpace: "nowrap" },
+  td: { padding: "var(--pad-cell)", borderBottom: `1px solid rgba(47,51,54,0.4)`, color: C.text, fontSize: "var(--font-td)" },
+  tdR: { padding: "var(--pad-cell)", borderBottom: `1px solid rgba(47,51,54,0.4)`, textAlign: "right", fontVariantNumeric: "tabular-nums", color: C.text, fontSize: "var(--font-td)" },
   btn: { padding: "8px 18px", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", border: "none" },
   btnP: { background: C.amber, color: "#fff" }, btnG: { background: C.border, color: C.muted }, btnD: { background: "#7F1D1D", color: "#FCA5A5" },
   tog: (a) => ({ padding: "8px 18px", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", background: a ? C.amber : C.border, color: a ? "#fff" : C.muted, border: "none" }),
 };
 function Stat({ label, value, sub, color }) {
-  return <div style={s.card}><div style={{ fontSize: 14, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600, marginBottom: 6 }}>{label}</div><div style={{ fontSize: 36, fontWeight: 700, color: color || C.text }}>{value}</div>{sub && <div style={{ fontSize: 15, color: C.muted, marginTop: 4 }}>{sub}</div>}</div>;
+  return <div style={s.card}><div style={{ fontSize: 14, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600, marginBottom: 6 }}>{label}</div><div style={{ fontSize: "var(--stat-val)", fontWeight: 700, color: color || C.text }}>{value}</div>{sub && <div style={{ fontSize: 15, color: C.muted, marginTop: 4 }}>{sub}</div>}</div>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1326,6 +1355,7 @@ function InventoryTab({ d, upd }) {
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════
 export default function App() {
+  useResponsive();
   const auth = useAuth();
   const st = useStorage(auth.user?.id);
   const [tab, setTab] = useState("dash");
@@ -1358,23 +1388,24 @@ export default function App() {
   return <div style={s.app}>
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <header style={s.hdr}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 42, height: 42, borderRadius: 8 }} />
-        <div><div style={{ fontSize: 22, fontWeight: 700 }}>Precision Farms</div><div style={{ fontSize: 13, color: C.muted, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Crop Budget Dashboard</div></div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ fontSize: 11, color: st.ss==="saved"?C.green:st.ss==="saving"?C.amber:C.red }}>{st.ss==="saved"?"✓ Saved":st.ss==="saving"?"Saving...":"Unsaved"}</div>
-        <div style={{ display: "flex", gap: 4, background: C.border, borderRadius: 8, padding: 4 }}>{[...st.years].sort((a,b)=>a-b).map(yr => <button key={yr} style={s.tog(yr===st.yr)} onClick={() => st.loadYr(yr)}>{yr}</button>)}</div>
-        <button style={{ ...s.btn, ...s.btnP }} onClick={() => { setNewYr(String(st.yr + 1)); setShowYM(true); }}>+ New Year</button>
-        <button style={{ ...s.btn, background: "#7C3AED", color: "#fff" }} onClick={() => { if (confirm("Seed historical data for 2020-2026? This will overwrite existing years.")) st.seedHistory(); }}>Seed History</button>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 8 }}>
-          <div style={{ fontSize: 12, color: C.muted }}>{auth.user.email}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "space-between", width: "100%" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 42, height: 42, borderRadius: 8 }} />
+          <div><div style={{ fontSize: 22, fontWeight: 700 }}>Precision Farms</div><div style={{ fontSize: 13, color: C.muted, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Crop Budget Dashboard</div></div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ fontSize: 11, color: st.ss==="saved"?C.green:st.ss==="saving"?C.amber:C.red }}>{st.ss==="saved"?"✓ Saved":st.ss==="saving"?"Saving...":"Unsaved"}</div>
           <button style={{ ...s.btn, ...s.btnG, padding: "4px 10px", fontSize: 11 }} onClick={auth.signOut}>Sign Out</button>
         </div>
       </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 4, background: C.border, borderRadius: 8, padding: 4, overflowX: "auto" }}>{[...st.years].sort((a,b)=>a-b).map(yr => <button key={yr} style={s.tog(yr===st.yr)} onClick={() => st.loadYr(yr)}>{yr}</button>)}</div>
+        <button style={{ ...s.btn, ...s.btnP }} onClick={() => { setNewYr(String(st.yr + 1)); setShowYM(true); }}>+ Year</button>
+        <button style={{ ...s.btn, background: "#7C3AED", color: "#fff", fontSize: 12, padding: "6px 12px" }} onClick={() => { if (confirm("Seed historical data for 2020-2026? This will overwrite existing years.")) st.seedHistory(); }}>Seed</button>
+      </div>
     </header>
     {showYM && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowYM(false)}>
-      <div style={{ ...s.card, width: 380, padding: 32 }} onClick={e => e.stopPropagation()}>
+      <div style={{ ...s.card, width: "min(380px, 90vw)", padding: 32 }} onClick={e => e.stopPropagation()}>
         <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Create New Crop Year</div>
         <input value={newYr} onChange={e => setNewYr(e.target.value)} style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, padding: "8px 12px", color: C.text, fontSize: 16, outline: "none", boxSizing: "border-box", marginBottom: 12 }} />
         <div style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>Copies budgets from <strong style={{ color: C.text }}>{st.yr}</strong>. Contracts and tickets start empty.</div>
