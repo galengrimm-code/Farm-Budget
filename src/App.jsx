@@ -1388,7 +1388,12 @@ export default function App() {
   return <div style={s.app}>
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <header style={s.hdr}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "space-between", width: "100%" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 4, background: C.border, borderRadius: 8, padding: 4, overflowX: "auto" }}>{[...st.years].sort((a,b)=>a-b).map(yr => <button key={yr} style={s.tog(yr===st.yr)} onClick={() => st.loadYr(yr)}>{yr}</button>)}</div>
+        <button style={{ ...s.btn, ...s.btnP }} onClick={() => { setNewYr(String(st.yr + 1)); setShowYM(true); }}>+ Year</button>
+        <button style={{ ...s.btn, background: "#7C3AED", color: "#fff", fontSize: 12, padding: "6px 12px" }} onClick={() => { if (confirm("Seed historical data for 2020-2026? This will overwrite existing years.")) st.seedHistory(); }}>Seed</button>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "flex-end", flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 42, height: 42, borderRadius: 8 }} />
           <div><div style={{ fontSize: 22, fontWeight: 700 }}>Precision Farms</div><div style={{ fontSize: 13, color: C.muted, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Crop Budget Dashboard</div></div>
@@ -1397,11 +1402,6 @@ export default function App() {
           <div style={{ fontSize: 11, color: st.ss==="saved"?C.green:st.ss==="saving"?C.amber:C.red }}>{st.ss==="saved"?"✓ Saved":st.ss==="saving"?"Saving...":"Unsaved"}</div>
           <button style={{ ...s.btn, ...s.btnG, padding: "4px 10px", fontSize: 11 }} onClick={auth.signOut}>Sign Out</button>
         </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 4, background: C.border, borderRadius: 8, padding: 4, overflowX: "auto" }}>{[...st.years].sort((a,b)=>a-b).map(yr => <button key={yr} style={s.tog(yr===st.yr)} onClick={() => st.loadYr(yr)}>{yr}</button>)}</div>
-        <button style={{ ...s.btn, ...s.btnP }} onClick={() => { setNewYr(String(st.yr + 1)); setShowYM(true); }}>+ Year</button>
-        <button style={{ ...s.btn, background: "#7C3AED", color: "#fff", fontSize: 12, padding: "6px 12px" }} onClick={() => { if (confirm("Seed historical data for 2020-2026? This will overwrite existing years.")) st.seedHistory(); }}>Seed</button>
       </div>
     </header>
     {showYM && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowYM(false)}>
