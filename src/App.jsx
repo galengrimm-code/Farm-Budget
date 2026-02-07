@@ -102,33 +102,33 @@ function defaultData(year) {
       ],
     },
     cashRents: [
-      { id: 1, owner: "Amberwell", farm: "Betty North", acres: 143, rentAc: 275, type: "Fixed", bonus: 0 },
-      { id: 2, owner: "Doug", farm: "Dad", acres: 503, rentAc: 190, type: "Base @ 190", bonus: 55 },
-      { id: 3, owner: "Gernon", farm: "G&O", acres: 102, rentAc: 140, type: "Base + 31% share", bonus: 91.58 },
-      { id: 4, owner: "Gernon", farm: "WCG", acres: 244, rentAc: 140, type: "Base + 31% share", bonus: 146.52 },
-      { id: 5, owner: "Gernon", farm: "Stover", acres: 44, rentAc: 140, type: "Base + 31% share", bonus: 132.37 },
-      { id: 6, owner: "J Six", farm: "J Six", acres: 61.1, rentAc: 210, type: "Fixed", bonus: 20 },
-      { id: 7, owner: "Keith", farm: "Hoffmans", acres: 74, rentAc: 190, type: "Base @ 190", bonus: 60 },
-      { id: 8, owner: "Keith", farm: "Twombly", acres: 155, rentAc: 180, type: "Flex Base 165", bonus: 50 },
-      { id: 9, owner: "Keith", farm: "Hupperts", acres: 59, rentAc: 180, type: "Flex Base 180", bonus: 80 },
-      { id: 10, owner: "Keith", farm: "Cashmans", acres: 48, rentAc: 175, type: "Flex Base 175", bonus: 65 },
-      { id: 11, owner: "Keith", farm: "Fergus", acres: 69, rentAc: 200, type: "", bonus: 0 },
-      { id: 12, owner: "Keith", farm: "Kraigs", acres: 40, rentAc: 200, type: "", bonus: 15 },
-      { id: 13, owner: "Keith&Galen", farm: "Rake", acres: 49, rentAc: 220, type: "Base + 32% share", bonus: 30 },
-      { id: 14, owner: "Kings", farm: "Kraigs", acres: 24, rentAc: 200, type: "", bonus: 0 },
-      { id: 15, owner: "Kohl", farm: "Smiths", acres: 143, rentAc: 185, type: "Base @ 185", bonus: 65 },
-      { id: 16, owner: "Kurt", farm: "Kurts", acres: 118, rentAc: 195, type: "Base @ 195", bonus: 55 },
-      { id: 17, owner: "Meyer", farm: "Meyer", acres: 628, rentAc: 290, type: "3yr Fixed 24-26", bonus: 0 },
-      { id: 18, owner: "Paul Shmidgall", farm: "Bettys South", acres: 59, rentAc: 280, type: "Fixed", bonus: 0 },
-      { id: 19, owner: "PF", farm: "Jones", acres: 84, rentAc: 505, type: "Contract for deed", bonus: 0 },
-      { id: 20, owner: "PF", farm: "Bills", acres: 23, rentAc: 311.22, type: "Payment", bonus: 0 },
-      { id: 21, owner: "PF", farm: "Jones 18ac", acres: 17, rentAc: 516.35, type: "Payment", bonus: 0 },
-      { id: 22, owner: "PF", farm: "Pyles", acres: 73, rentAc: 275.74, type: "Payment", bonus: 0 },
-      { id: 23, owner: "Plamann", farm: "Plamann", acres: 215, rentAc: 205, type: "Fixed", bonus: 25 },
-      { id: 24, owner: "Saylor", farm: "Preston", acres: 356, rentAc: 190, type: "Flex Base 190", bonus: 63 },
-      { id: 25, owner: "Saylor", farm: "Giffillian", acres: 121, rentAc: 205, type: "Flex Base 205", bonus: 9 },
-      { id: 26, owner: "Saylor", farm: "Bottom", acres: 62, rentAc: 210, type: "Flex Base 210", bonus: 32 },
-      { id: 27, owner: "Witt", farm: "Witt", acres: 239, rentAc: 230, type: "Fixed", bonus: 0 },
+      { id: 1, owner: "Amberwell", farm: "Betty North", acres: 143, rentAc: 275, type: "Fixed", bonus: 0, cat: "cash" },
+      { id: 2, owner: "Doug", farm: "Dad", acres: 503, rentAc: 190, type: "Base @ 190", bonus: 55, cat: "cash" },
+      { id: 3, owner: "Gernon", farm: "G&O", acres: 102, rentAc: 140, type: "Base + 31% share", bonus: 91.58, cat: "share" },
+      { id: 4, owner: "Gernon", farm: "WCG", acres: 244, rentAc: 140, type: "Base + 31% share", bonus: 146.52, cat: "share" },
+      { id: 5, owner: "Gernon", farm: "Stover", acres: 44, rentAc: 140, type: "Base + 31% share", bonus: 132.37, cat: "share" },
+      { id: 6, owner: "J Six", farm: "J Six", acres: 61.1, rentAc: 210, type: "Fixed", bonus: 20, cat: "cash" },
+      { id: 7, owner: "Keith", farm: "Hoffmans", acres: 74, rentAc: 190, type: "Base @ 190", bonus: 60, cat: "cash" },
+      { id: 8, owner: "Keith", farm: "Twombly", acres: 155, rentAc: 180, type: "Flex Base 165", bonus: 50, cat: "cash" },
+      { id: 9, owner: "Keith", farm: "Hupperts", acres: 59, rentAc: 180, type: "Flex Base 180", bonus: 80, cat: "cash" },
+      { id: 10, owner: "Keith", farm: "Cashmans", acres: 48, rentAc: 175, type: "Flex Base 175", bonus: 65, cat: "cash" },
+      { id: 11, owner: "Keith", farm: "Fergus", acres: 69, rentAc: 200, type: "", bonus: 0, cat: "cash" },
+      { id: 12, owner: "Keith", farm: "Kraigs", acres: 40, rentAc: 200, type: "", bonus: 15, cat: "cash" },
+      { id: 13, owner: "Keith&Galen", farm: "Rake", acres: 49, rentAc: 220, type: "Base + 32% share", bonus: 30, cat: "share" },
+      { id: 14, owner: "Kings", farm: "Kraigs", acres: 24, rentAc: 200, type: "", bonus: 0, cat: "cash" },
+      { id: 15, owner: "Kohl", farm: "Smiths", acres: 143, rentAc: 185, type: "Base @ 185", bonus: 65, cat: "cash" },
+      { id: 16, owner: "Kurt", farm: "Kurts", acres: 118, rentAc: 195, type: "Base @ 195", bonus: 55, cat: "cash" },
+      { id: 17, owner: "Meyer", farm: "Meyer", acres: 628, rentAc: 290, type: "3yr Fixed 24-26", bonus: 0, cat: "cash" },
+      { id: 18, owner: "Paul Shmidgall", farm: "Bettys South", acres: 59, rentAc: 280, type: "Fixed", bonus: 0, cat: "cash" },
+      { id: 19, owner: "PF", farm: "Jones", acres: 84, rentAc: 505, type: "Contract for deed", bonus: 0, cat: "owned" },
+      { id: 20, owner: "PF", farm: "Bills", acres: 23, rentAc: 311.22, type: "Payment", bonus: 0, cat: "owned" },
+      { id: 21, owner: "PF", farm: "Jones 18ac", acres: 17, rentAc: 516.35, type: "Payment", bonus: 0, cat: "owned" },
+      { id: 22, owner: "PF", farm: "Pyles", acres: 73, rentAc: 275.74, type: "Payment", bonus: 0, cat: "owned" },
+      { id: 23, owner: "Plamann", farm: "Plamann", acres: 215, rentAc: 205, type: "Fixed", bonus: 25, cat: "cash" },
+      { id: 24, owner: "Saylor", farm: "Preston", acres: 356, rentAc: 190, type: "Flex Base 190", bonus: 63, cat: "cash" },
+      { id: 25, owner: "Saylor", farm: "Giffillian", acres: 121, rentAc: 205, type: "Flex Base 205", bonus: 9, cat: "cash" },
+      { id: 26, owner: "Saylor", farm: "Bottom", acres: 62, rentAc: 210, type: "Flex Base 210", bonus: 32, cat: "cash" },
+      { id: 27, owner: "Witt", farm: "Witt", acres: 239, rentAc: 230, type: "Fixed", bonus: 0, cat: "cash" },
     ],
     grainTickets: [],
   };
@@ -904,15 +904,33 @@ function TicketsTab({ d, upd }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // CASH RENTS TAB
 // ═══════════════════════════════════════════════════════════════════════════
+const RENT_CATS = [
+  { id: "cash", label: "Cash Rent", color: C.green },
+  { id: "owned", label: "Owned", color: C.amber },
+  { id: "share", label: "Share Crop", color: C.purple },
+  { id: "custom", label: "Custom", color: "#3B82F6" },
+];
 function RentsTab({ d, upd }) {
   const u = (fn) => upd(p => { fn(p); return p; }); const r = d.cashRents || [];
   const tAc = r.reduce((a,r) => a + r.acres, 0), tB = r.reduce((a,r) => a + r.rentAc*r.acres, 0), tBn = r.reduce((a,r) => a + (r.rentAc+r.bonus)*r.acres, 0);
-  return <div><div style={s.title}>Cash Rents — {d.year}</div>
-    <div style={{ ...s.grid(4), marginBottom: 24 }}><Stat label="Total Rented Acres" value={fmt(tAc, 1)} sub={`${r.length} farms`} /><Stat label="Total Base" value={"$"+fmt(tB)} sub={`Avg ${fmtD(tAc>0?tB/tAc:0)}/ac`} /><Stat label="w/ Bonus" value={"$"+fmt(tBn)} color={C.amber} /><Stat label="Bonus Exposure" value={"$"+fmt(tBn-tB)} color={C.red} /></div>
-    <div style={s.card}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}><span style={{ fontWeight: 600 }}>All Leases</span><button style={{ ...s.btn, ...s.btnP }} onClick={() => u(p => { const mx = p.cashRents.reduce((m,r)=>Math.max(m,r.id),0); p.cashRents.push({id:mx+1,owner:"New",farm:"Farm",acres:0,rentAc:0,type:"",bonus:0}); })}>+ Add</button></div>
-    <div style={{ overflowX: "auto" }}><table style={s.tbl}><thead><tr><th style={s.th}>Owner</th><th style={s.th}>Farm</th><th style={s.thR}>Acres</th><th style={s.thR}>Rent/ac</th><th style={s.thR}>Base</th><th style={s.th}>Type</th><th style={s.thR}>Bonus</th><th style={s.thR}>w/ Bonus</th><th></th></tr></thead><tbody>
-      {r.map((r, i) => <tr key={r.id}><td style={{ ...s.td, fontWeight: 600 }}><E value={r.owner} f="text" onSave={v => u(p => { p.cashRents[i].owner = v; })} prefix="" /></td><td style={s.td}><E value={r.farm} f="text" onSave={v => u(p => { p.cashRents[i].farm = v; })} prefix="" /></td><td style={s.tdR}><E value={r.acres} onSave={v => u(p => { p.cashRents[i].acres = v; })} dec={1} prefix="" f="plain" /></td><td style={s.tdR}><E value={r.rentAc} onSave={v => u(p => { p.cashRents[i].rentAc = v; })} /></td><td style={s.tdR}>{"$"+fmt(r.rentAc*r.acres)}</td><td style={s.td}><E value={r.type} f="text" onSave={v => u(p => { p.cashRents[i].type = v; })} prefix="" /></td><td style={s.tdR}><E value={r.bonus} onSave={v => u(p => { p.cashRents[i].bonus = v; })} /></td><td style={{ ...s.tdR, fontWeight: 600, color: C.amber }}>{"$"+fmt((r.rentAc+r.bonus)*r.acres)}</td><td style={s.td}><button onClick={() => u(p => { p.cashRents.splice(i, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
-      <tr style={{ background: "rgba(217,119,6,0.08)" }}><td colSpan={2} style={{ ...s.td, fontWeight: 700, color: C.amber }}>TOTAL</td><td style={{ ...s.tdR, fontWeight: 700 }}>{fmt(tAc, 1)}</td><td style={{ ...s.tdR, fontWeight: 700 }}>{tAc>0?fmtD(tB/tAc):"—"}</td><td style={{ ...s.tdR, fontWeight: 700 }}>{"$"+fmt(tB)}</td><td></td><td></td><td style={{ ...s.tdR, fontWeight: 700, color: C.amber }}>{"$"+fmt(tBn)}</td><td></td></tr>
+  const byCat = RENT_CATS.map(cat => {
+    const items = r.filter(x => (x.cat || "cash") === cat.id);
+    const ac = items.reduce((a, x) => a + x.acres, 0);
+    const cost = items.reduce((a, x) => a + (x.rentAc + x.bonus) * x.acres, 0);
+    return { ...cat, items, ac, cost };
+  });
+  return <div><div style={s.title}>Cash Rents & Land — {d.year}</div>
+    {/* Acre breakdown by category */}
+    <div style={{ ...s.grid(4), marginBottom: 24 }}>
+      {byCat.map(cat => (
+        <Stat key={cat.id} label={cat.label} value={fmt(cat.ac, 1) + " ac"} sub={cat.ac > 0 ? `${cat.items.length} farms — $${fmt(cat.cost)}` : `${cat.items.length} farms`} color={cat.color} />
+      ))}
+    </div>
+    <div style={{ ...s.grid(4), marginBottom: 24 }}><Stat label="Total Acres" value={fmt(tAc, 1)} sub={`${r.length} farms`} /><Stat label="Total Base" value={"$"+fmt(tB)} sub={`Avg ${fmtD(tAc>0?tB/tAc:0)}/ac`} /><Stat label="w/ Bonus" value={"$"+fmt(tBn)} color={C.amber} /><Stat label="Bonus Exposure" value={"$"+fmt(tBn-tB)} color={C.red} /></div>
+    <div style={s.card}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}><span style={{ fontWeight: 600 }}>All Leases</span><button style={{ ...s.btn, ...s.btnP }} onClick={() => u(p => { const mx = p.cashRents.reduce((m,r)=>Math.max(m,r.id),0); p.cashRents.push({id:mx+1,owner:"New",farm:"Farm",acres:0,rentAc:0,type:"",bonus:0,cat:"cash"}); })}>+ Add</button></div>
+    <div style={{ overflowX: "auto" }}><table style={s.tbl}><thead><tr><th style={s.th}>Category</th><th style={s.th}>Owner</th><th style={s.th}>Farm</th><th style={s.thR}>Acres</th><th style={s.thR}>Rent/ac</th><th style={s.thR}>Base</th><th style={s.th}>Type</th><th style={s.thR}>Bonus</th><th style={s.thR}>w/ Bonus</th><th></th></tr></thead><tbody>
+      {r.map((r, i) => { const cat = RENT_CATS.find(c => c.id === (r.cat || "cash")) || RENT_CATS[0]; return <tr key={r.id}><td style={s.td}><select value={r.cat || "cash"} onChange={e => u(p => { p.cashRents[i].cat = e.target.value; })} style={{ background: C.bg, border: `1px solid ${cat.color}44`, borderRadius: 4, color: cat.color, padding: "4px 8px", fontSize: 13, fontWeight: 600, outline: "none", cursor: "pointer" }}>{RENT_CATS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}</select></td><td style={{ ...s.td, fontWeight: 600 }}><E value={r.owner} f="text" onSave={v => u(p => { p.cashRents[i].owner = v; })} prefix="" /></td><td style={s.td}><E value={r.farm} f="text" onSave={v => u(p => { p.cashRents[i].farm = v; })} prefix="" /></td><td style={s.tdR}><E value={r.acres} onSave={v => u(p => { p.cashRents[i].acres = v; })} dec={1} prefix="" f="plain" /></td><td style={s.tdR}><E value={r.rentAc} onSave={v => u(p => { p.cashRents[i].rentAc = v; })} /></td><td style={s.tdR}>{"$"+fmt(r.rentAc*r.acres)}</td><td style={s.td}><E value={r.type} f="text" onSave={v => u(p => { p.cashRents[i].type = v; })} prefix="" /></td><td style={s.tdR}><E value={r.bonus} onSave={v => u(p => { p.cashRents[i].bonus = v; })} /></td><td style={{ ...s.tdR, fontWeight: 600, color: C.amber }}>{"$"+fmt((r.rentAc+r.bonus)*r.acres)}</td><td style={s.td}><button onClick={() => u(p => { p.cashRents.splice(i, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>; })}
+      <tr style={{ background: "rgba(217,119,6,0.08)" }}><td></td><td colSpan={2} style={{ ...s.td, fontWeight: 700, color: C.amber }}>TOTAL</td><td style={{ ...s.tdR, fontWeight: 700 }}>{fmt(tAc, 1)}</td><td style={{ ...s.tdR, fontWeight: 700 }}>{tAc>0?fmtD(tB/tAc):"—"}</td><td style={{ ...s.tdR, fontWeight: 700 }}>{"$"+fmt(tB)}</td><td></td><td></td><td style={{ ...s.tdR, fontWeight: 700, color: C.amber }}>{"$"+fmt(tBn)}</td><td></td></tr>
     </tbody></table></div></div></div>;
 }
 
