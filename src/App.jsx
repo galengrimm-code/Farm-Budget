@@ -132,6 +132,8 @@ function defaultData(year) {
       { id: 27, owner: "Witt", farm: "Witt", acres: 239, rentAc: 230, type: "Fixed", bonus: 0, cat: "cash" },
     ],
     grainTickets: [],
+    capitalPlan: [],
+    wishList: [],
   };
 }
 
@@ -328,7 +330,7 @@ function useStorage(userId) {
     } catch { src = defaultData(from); }
     const cp = JSON.parse(JSON.stringify(src)); cp.year = to;
     cp.crops.forEach(c => { c.actualYield = null; c.actualPrice = null; });
-    cp.contracts = {}; cp.marketingGroups.forEach(g => { cp.contracts[g.id] = []; }); cp.grainTickets = [];
+    cp.contracts = {}; cp.marketingGroups.forEach(g => { cp.contracts[g.id] = []; }); cp.grainTickets = []; cp.capitalPlan = []; cp.wishList = [];
     await save(cp);
     setYears(p => [...new Set([to, ...p])].sort((a, b) => b - a)); setData(cp); setYr(to);
   }, [userId, save]);
@@ -1015,6 +1017,137 @@ function RentsTab({ d, upd }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// CAPITAL PURCHASE PLAN TAB
+// ═══════════════════════════════════════════════════════════════════════════
+function CapitalTab({ d, upd }) {
+  const u = (fn) => upd(p => { fn(p); return p; });
+  const items = d.capitalPlan || [];
+  const wish = d.wishList || [];
+  const yr = d.year;
+  const viewYears = [yr - 1, yr, yr + 1, yr + 2];
+
+  // Stats for current year
+  const curItems = items.filter(it => it.year === yr);
+  const totEst = curItems.reduce((a, it) => a + (it.estimated || 0), 0);
+  const totAct = curItems.reduce((a, it) => a + (it.actual || 0), 0);
+  const variance = totAct - totEst;
+
+  return <div>
+    <div style={s.title}>Capital Purchase Plan — {yr}</div>
+    <div style={{ ...s.grid(4), marginBottom: 24 }}>
+      <Stat label={`${yr} Estimated`} value={"$" + fmt(totEst)} />
+      <Stat label={`${yr} Actual`} value={"$" + fmt(totAct)} color={C.amber} />
+      <Stat label="Variance" value={(variance >= 0 ? "+" : "") + "$" + fmt(Math.abs(variance))} color={variance > 0 ? C.red : C.green} sub={totEst > 0 ? `${((variance / totEst) * 100).toFixed(1)}%` : ""} />
+      <Stat label="Total Items" value={items.length} sub={`Wish list: ${wish.length}`} />
+    </div>
+
+    {/* Year sections */}
+    {viewYears.map(y => {
+      const yItems = items.filter(it => it.year === y);
+      const yEst = yItems.reduce((a, it) => a + (it.estimated || 0), 0);
+      const yAct = yItems.reduce((a, it) => a + (it.actual || 0), 0);
+      const isActive = y === yr;
+      return <div key={y} style={{ ...s.card, marginBottom: 16, borderLeft: isActive ? `3px solid ${C.amber}` : undefined }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontWeight: 700, fontSize: 18, color: isActive ? C.amber : C.text }}>{y}</span>
+            {y < yr && <span style={badge(C.muted)}>Past</span>}
+            {y === yr && <span style={badge(C.amber)}>Current</span>}
+            {y > yr && <span style={badge(C.green)}>Planned</span>}
+            <span style={{ fontSize: 13, color: C.muted }}>{yItems.length} items — Est: ${fmt(yEst)} / Actual: ${fmt(yAct)}</span>
+          </div>
+          <button style={{ ...s.btn, ...s.btnP }} onClick={() => u(p => {
+            if (!p.capitalPlan) p.capitalPlan = [];
+            const mx = p.capitalPlan.reduce((m, it) => Math.max(m, it.id || 0), 0);
+            p.capitalPlan.push({ id: mx + 1, year: y, item: "", estimated: 0, actual: 0 });
+          })}>+ Add Item</button>
+        </div>
+        {yItems.length === 0 && <div style={{ color: C.muted, fontSize: 14, padding: "8px 0" }}>No items planned for {y}</div>}
+        {yItems.length > 0 && <table style={s.tbl}><thead><tr>
+          <th style={s.th}>Item</th>
+          <th style={s.thR}>Estimated</th>
+          <th style={s.thR}>Actual</th>
+          <th style={s.thR}>Variance</th>
+          <th style={{ ...s.th, width: 100 }}>Move To</th>
+          <th style={{ ...s.th, width: 40 }}></th>
+        </tr></thead><tbody>
+          {yItems.map(it => {
+            const idx = items.indexOf(it);
+            const v = (it.actual || 0) - (it.estimated || 0);
+            return <tr key={it.id}>
+              <td style={{ ...s.td, fontWeight: 600 }}><E value={it.item} f="text" onSave={v => u(p => { p.capitalPlan[idx].item = v; })} prefix="" /></td>
+              <td style={s.tdR}><E value={it.estimated} onSave={v => u(p => { p.capitalPlan[idx].estimated = v; })} dec={0} /></td>
+              <td style={s.tdR}><E value={it.actual} onSave={v => u(p => { p.capitalPlan[idx].actual = v; })} dec={0} /></td>
+              <td style={{ ...s.tdR, color: it.actual ? (v > 0 ? C.red : C.green) : C.muted }}>{it.actual ? (v >= 0 ? "+$" : "-$") + fmt(Math.abs(v)) : "—"}</td>
+              <td style={s.td}>
+                <select value={it.year} onChange={e => u(p => { p.capitalPlan[idx].year = parseInt(e.target.value); })} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, color: C.text, padding: "4px 8px", fontSize: 13, outline: "none", cursor: "pointer" }}>
+                  {viewYears.map(vy => <option key={vy} value={vy}>{vy}</option>)}
+                </select>
+              </td>
+              <td style={s.td}><button onClick={() => u(p => { p.capitalPlan.splice(idx, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td>
+            </tr>;
+          })}
+          <tr style={{ background: "rgba(217,119,6,0.08)" }}>
+            <td style={{ ...s.td, fontWeight: 700, color: C.amber }}>TOTAL</td>
+            <td style={{ ...s.tdR, fontWeight: 700 }}>{"$" + fmt(yEst)}</td>
+            <td style={{ ...s.tdR, fontWeight: 700 }}>{"$" + fmt(yAct)}</td>
+            <td style={{ ...s.tdR, fontWeight: 700, color: (yAct - yEst) > 0 ? C.red : C.green }}>{yAct ? (yAct - yEst >= 0 ? "+$" : "-$") + fmt(Math.abs(yAct - yEst)) : "—"}</td>
+            <td colSpan={2}></td>
+          </tr>
+        </tbody></table>}
+      </div>;
+    })}
+
+    {/* Wish List */}
+    <div style={{ ...s.card, marginTop: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontWeight: 700, fontSize: 18 }}>Wish List</span>
+          <span style={{ fontSize: 13, color: C.muted }}>Ideas & brainstorming — not on the plan yet</span>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={{ ...s.btn, ...s.btnP }} onClick={() => u(p => {
+            if (!p.wishList) p.wishList = [];
+            const mx = p.wishList.reduce((m, it) => Math.max(m, it.id || 0), 0);
+            p.wishList.push({ id: mx + 1, item: "", estCost: 0, notes: "" });
+          })}>+ Add Item</button>
+        </div>
+      </div>
+      {wish.length === 0 && <div style={{ color: C.muted, fontSize: 14, padding: "8px 0" }}>No wish list items yet</div>}
+      {wish.length > 0 && <table style={s.tbl}><thead><tr>
+        <th style={s.th}>Item</th>
+        <th style={s.thR}>Est. Cost</th>
+        <th style={s.th}>Notes</th>
+        <th style={{ ...s.th, width: 120 }}>Move to Plan</th>
+        <th style={{ ...s.th, width: 40 }}></th>
+      </tr></thead><tbody>
+        {wish.map((it, i) => <tr key={it.id}>
+          <td style={{ ...s.td, fontWeight: 600 }}><E value={it.item} f="text" onSave={v => u(p => { p.wishList[i].item = v; })} prefix="" /></td>
+          <td style={s.tdR}><E value={it.estCost} onSave={v => u(p => { p.wishList[i].estCost = v; })} dec={0} /></td>
+          <td style={s.td}><E value={it.notes} f="text" onSave={v => u(p => { p.wishList[i].notes = v; })} prefix="" /></td>
+          <td style={s.td}>
+            <select value="" onChange={e => {
+              const targetYr = parseInt(e.target.value);
+              if (isNaN(targetYr)) return;
+              u(p => {
+                if (!p.capitalPlan) p.capitalPlan = [];
+                const mx = p.capitalPlan.reduce((m, x) => Math.max(m, x.id || 0), 0);
+                p.capitalPlan.push({ id: mx + 1, year: targetYr, item: it.item, estimated: it.estCost || 0, actual: 0 });
+                p.wishList.splice(i, 1);
+              });
+            }} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, color: C.text, padding: "4px 8px", fontSize: 13, outline: "none", cursor: "pointer" }}>
+              <option value="">—</option>
+              {viewYears.map(vy => <option key={vy} value={vy}>{vy}</option>)}
+            </select>
+          </td>
+          <td style={s.td}><button onClick={() => u(p => { p.wishList.splice(i, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td>
+        </tr>)}
+      </tbody></table>}
+    </div>
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════
 export default function App() {
@@ -1045,7 +1178,7 @@ export default function App() {
   if (st.loading) return <div style={{ ...s.app, display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><div style={{ textAlign: "center" }}><img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 64, height: 64, borderRadius: 12, marginBottom: 16 }} /><div style={{ color: C.muted }}>Loading data...</div></div></div>;
   if (!st.data) return null;
   const d = st.data;
-  const tabs = [{ id: "dash", label: "Dashboard" }, { id: "budgets", label: "Crop Budgets" }, ...d.marketingGroups.map(g => ({ id: "mkt_" + g.id, label: g.name })), { id: "tickets", label: "🎫 Grain Tickets" }, { id: "rents", label: "Cash Rents" }];
+  const tabs = [{ id: "dash", label: "Dashboard" }, { id: "budgets", label: "Crop Budgets" }, ...d.marketingGroups.map(g => ({ id: "mkt_" + g.id, label: g.name })), { id: "tickets", label: "Grain Tickets" }, { id: "rents", label: "Cash Rents" }, { id: "capital", label: "Capital Plan" }];
 
   return <div style={s.app}>
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -1078,6 +1211,7 @@ export default function App() {
       {d.marketingGroups.map(g => tab === "mkt_"+g.id && <MktTab key={g.id} d={d} upd={st.upd} gid={g.id} />)}
       {tab === "tickets" && <TicketsTab d={d} upd={st.upd} />}
       {tab === "rents" && <RentsTab d={d} upd={st.upd} />}
+      {tab === "capital" && <CapitalTab d={d} upd={st.upd} />}
     </main>
   </div>;
 }
