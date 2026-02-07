@@ -136,6 +136,7 @@ function defaultData(year) {
     wishList: [],
     inventoryProducts: [
       { id: "p1", name: "Soybeans", unit: "bu" },
+      { id: "p8", name: "Non-GMO Soybeans", unit: "bu" },
       { id: "p2", name: "Amylose", unit: "bu" },
       { id: "p3", name: "Reg Corn", unit: "bu" },
       { id: "p4", name: "Dyed Diesel", unit: "gal" },
