@@ -134,6 +134,16 @@ function defaultData(year) {
     grainTickets: [],
     capitalPlan: [],
     wishList: [],
+    inventoryProducts: [
+      { id: "p1", name: "Soybeans", unit: "bu" },
+      { id: "p2", name: "Amylose", unit: "bu" },
+      { id: "p3", name: "Reg Corn", unit: "bu" },
+      { id: "p4", name: "Dyed Diesel", unit: "gal" },
+      { id: "p5", name: "Clear Diesel", unit: "gal" },
+      { id: "p6", name: "Propane", unit: "gal" },
+      { id: "p7", name: "NH3", unit: "ton" },
+    ],
+    inventorySnapshots: [],
   };
 }
 
@@ -330,7 +340,7 @@ function useStorage(userId) {
     } catch { src = defaultData(from); }
     const cp = JSON.parse(JSON.stringify(src)); cp.year = to;
     cp.crops.forEach(c => { c.actualYield = null; c.actualPrice = null; });
-    cp.contracts = {}; cp.marketingGroups.forEach(g => { cp.contracts[g.id] = []; }); cp.grainTickets = []; cp.capitalPlan = []; cp.wishList = [];
+    cp.contracts = {}; cp.marketingGroups.forEach(g => { cp.contracts[g.id] = []; }); cp.grainTickets = []; cp.capitalPlan = []; cp.wishList = []; cp.inventorySnapshots = [];
     await save(cp);
     setYears(p => [...new Set([to, ...p])].sort((a, b) => b - a)); setData(cp); setYr(to);
   }, [userId, save]);
@@ -1148,6 +1158,148 @@ function CapitalTab({ d, upd }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// CURRENT INVENTORY TAB
+// ═══════════════════════════════════════════════════════════════════════════
+function InventoryTab({ d, upd }) {
+  const u = (fn) => upd(p => { fn(p); return p; });
+  const products = d.inventoryProducts || [];
+  const snaps = d.inventorySnapshots || [];
+  const [showAdd, setShowAdd] = useState(false);
+  const [newProd, setNewProd] = useState("");
+
+  const addSnapshot = () => {
+    u(p => {
+      if (!p.inventorySnapshots) p.inventorySnapshots = [];
+      const mx = p.inventorySnapshots.reduce((m, s) => Math.max(m, s.id || 0), 0);
+      const items = {};
+      products.forEach(pr => { items[pr.id] = { price: 0, qty: 0 }; });
+      p.inventorySnapshots.push({ id: mx + 1, date: new Date().toISOString().slice(0, 10), label: "", items });
+    });
+  };
+
+  const addProduct = () => {
+    if (!newProd.trim()) return;
+    u(p => {
+      if (!p.inventoryProducts) p.inventoryProducts = [];
+      const mx = p.inventoryProducts.reduce((m, pr) => Math.max(m, parseInt(pr.id.replace("p", "")) || 0), 0);
+      const id = "p" + (mx + 1);
+      p.inventoryProducts.push({ id, name: newProd.trim(), unit: "" });
+      // Add to existing snapshots
+      (p.inventorySnapshots || []).forEach(s => { if (!s.items[id]) s.items[id] = { price: 0, qty: 0 }; });
+    });
+    setNewProd("");
+    setShowAdd(false);
+  };
+
+  // Latest snapshot total for stats
+  const latest = snaps.length > 0 ? snaps[snaps.length - 1] : null;
+  const latestTotal = latest ? products.reduce((a, pr) => a + (latest.items?.[pr.id]?.price || 0) * (latest.items?.[pr.id]?.qty || 0), 0) : 0;
+  const first = snaps.length > 0 ? snaps[0] : null;
+  const firstTotal = first ? products.reduce((a, pr) => a + (first.items?.[pr.id]?.price || 0) * (first.items?.[pr.id]?.qty || 0), 0) : 0;
+
+  return <div>
+    <div style={s.title}>Current Inventory — {d.year}</div>
+    <div style={{ ...s.grid(4), marginBottom: 24 }}>
+      <Stat label="Snapshots" value={snaps.length} sub="Benchmarks this year" />
+      <Stat label="Products Tracked" value={products.length} />
+      <Stat label="Latest Value" value={"$" + fmt(latestTotal)} color={C.amber} sub={latest ? latest.date + (latest.label ? " — " + latest.label : "") : "No snapshots"} />
+      <Stat label="Change" value={snaps.length >= 2 ? (latestTotal - firstTotal >= 0 ? "+$" : "-$") + fmt(Math.abs(latestTotal - firstTotal)) : "—"} color={snaps.length >= 2 ? (latestTotal >= firstTotal ? C.green : C.red) : C.muted} sub={snaps.length >= 2 ? `Since ${first.date}` : "Need 2+ snapshots"} />
+    </div>
+
+    {/* Products management */}
+    <div style={{ ...s.card, marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <span style={{ fontWeight: 600 }}>Products</span>
+        <div style={{ display: "flex", gap: 8 }}>
+          {showAdd ? <div style={{ display: "flex", gap: 6 }}>
+            <input value={newProd} onChange={e => setNewProd(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addProduct(); }} placeholder="Product name" style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, color: C.text, padding: "4px 8px", fontSize: 13, outline: "none", width: 160 }} />
+            <button style={{ ...s.btn, ...s.btnP, padding: "4px 10px", fontSize: 12 }} onClick={addProduct}>Add</button>
+            <button style={{ ...s.btn, ...s.btnG, padding: "4px 10px", fontSize: 12 }} onClick={() => { setShowAdd(false); setNewProd(""); }}>Cancel</button>
+          </div> : <button style={{ ...s.btn, ...s.btnP }} onClick={() => setShowAdd(true)}>+ Add Product</button>}
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {products.map((pr, i) => <div key={pr.id} style={{ background: C.bg, borderRadius: 6, padding: "6px 12px", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>{pr.name}</span>
+          {pr.unit && <span style={{ fontSize: 12, color: C.muted }}>({pr.unit})</span>}
+          <button onClick={() => u(p => { p.inventoryProducts.splice(i, 1); })} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 11, padding: 0 }}>✕</button>
+        </div>)}
+      </div>
+    </div>
+
+    {/* Add snapshot button */}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      <span style={{ fontWeight: 700, fontSize: 18 }}>Inventory Benchmarks</span>
+      <button style={{ ...s.btn, ...s.btnP }} onClick={addSnapshot}>+ New Snapshot</button>
+    </div>
+
+    {/* Snapshots */}
+    {snaps.length === 0 && <div style={{ ...s.card, color: C.muted, fontSize: 14, textAlign: "center", padding: 32 }}>No inventory snapshots yet. Click "+ New Snapshot" to record your first benchmark.</div>}
+    {[...snaps].reverse().map((snap, ri) => {
+      const si = snaps.length - 1 - ri;
+      const total = products.reduce((a, pr) => a + (snap.items?.[pr.id]?.price || 0) * (snap.items?.[pr.id]?.qty || 0), 0);
+      return <div key={snap.id} style={{ ...s.card, marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <input type="date" value={snap.date || ""} onChange={e => u(p => { p.inventorySnapshots[si].date = e.target.value; })} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, color: C.text, padding: "6px 10px", fontSize: 14, outline: "none" }} />
+            <input value={snap.label || ""} onChange={e => u(p => { p.inventorySnapshots[si].label = e.target.value; })} placeholder="Label (e.g. Month-end, Year-end)" style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, color: C.text, padding: "6px 10px", fontSize: 14, outline: "none", width: 240 }} />
+            <span style={{ fontWeight: 700, fontSize: 18, color: C.amber }}>{"$" + fmt(total)}</span>
+          </div>
+          <button onClick={() => u(p => { p.inventorySnapshots.splice(si, 1); })} style={{ ...s.btn, ...s.btnD, padding: "4px 10px", fontSize: 11 }}>Delete</button>
+        </div>
+        <table style={s.tbl}><thead><tr>
+          <th style={s.th}>Product</th>
+          <th style={s.thR}>Market Value</th>
+          <th style={s.thR}>Quantity</th>
+          <th style={s.thR}>Gross Amount</th>
+        </tr></thead><tbody>
+          {products.map(pr => {
+            const it = snap.items?.[pr.id] || { price: 0, qty: 0 };
+            const gross = (it.price || 0) * (it.qty || 0);
+            return <tr key={pr.id}>
+              <td style={{ ...s.td, fontWeight: 600 }}>{pr.name}</td>
+              <td style={s.tdR}><E value={it.price} onSave={v => u(p => { if (!p.inventorySnapshots[si].items[pr.id]) p.inventorySnapshots[si].items[pr.id] = { price: 0, qty: 0 }; p.inventorySnapshots[si].items[pr.id].price = v; })} dec={2} /></td>
+              <td style={s.tdR}><E value={it.qty} onSave={v => u(p => { if (!p.inventorySnapshots[si].items[pr.id]) p.inventorySnapshots[si].items[pr.id] = { price: 0, qty: 0 }; p.inventorySnapshots[si].items[pr.id].qty = v; })} dec={0} prefix="" f="int" /></td>
+              <td style={{ ...s.tdR, fontWeight: 600, color: gross > 0 ? C.text : C.muted }}>{"$" + fmt(gross)}</td>
+            </tr>;
+          })}
+          <tr style={{ background: "rgba(217,119,6,0.08)" }}>
+            <td style={{ ...s.td, fontWeight: 700, color: C.amber }}>TOTAL</td>
+            <td style={s.tdR}></td>
+            <td style={s.tdR}></td>
+            <td style={{ ...s.tdR, fontWeight: 700, color: C.amber }}>{"$" + fmt(total)}</td>
+          </tr>
+        </tbody></table>
+      </div>;
+    })}
+
+    {/* Comparison table if 2+ snapshots */}
+    {snaps.length >= 2 && <div style={{ ...s.card, marginTop: 16 }}>
+      <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 12 }}>Inventory Trend</div>
+      <div style={{ overflowX: "auto" }}><table style={s.tbl}><thead><tr>
+        <th style={s.th}>Product</th>
+        {snaps.map(snap => <th key={snap.id} style={s.thR}>{snap.date}{snap.label ? " " + snap.label : ""}</th>)}
+      </tr></thead><tbody>
+        {products.map(pr => <tr key={pr.id}>
+          <td style={{ ...s.td, fontWeight: 600 }}>{pr.name}</td>
+          {snaps.map(snap => {
+            const it = snap.items?.[pr.id] || {};
+            return <td key={snap.id} style={s.tdR}>{"$" + fmt((it.price || 0) * (it.qty || 0))}</td>;
+          })}
+        </tr>)}
+        <tr style={{ background: "rgba(217,119,6,0.08)" }}>
+          <td style={{ ...s.td, fontWeight: 700, color: C.amber }}>TOTAL</td>
+          {snaps.map(snap => {
+            const t = products.reduce((a, pr) => a + (snap.items?.[pr.id]?.price || 0) * (snap.items?.[pr.id]?.qty || 0), 0);
+            return <td key={snap.id} style={{ ...s.tdR, fontWeight: 700, color: C.amber }}>{"$" + fmt(t)}</td>;
+          })}
+        </tr>
+      </tbody></table></div>
+    </div>}
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════
 export default function App() {
@@ -1178,7 +1330,7 @@ export default function App() {
   if (st.loading) return <div style={{ ...s.app, display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><div style={{ textAlign: "center" }}><img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 64, height: 64, borderRadius: 12, marginBottom: 16 }} /><div style={{ color: C.muted }}>Loading data...</div></div></div>;
   if (!st.data) return null;
   const d = st.data;
-  const tabs = [{ id: "dash", label: "Dashboard" }, { id: "budgets", label: "Crop Budgets" }, ...d.marketingGroups.map(g => ({ id: "mkt_" + g.id, label: g.name })), { id: "tickets", label: "Grain Tickets" }, { id: "rents", label: "Cash Rents" }, { id: "capital", label: "Capital Plan" }];
+  const tabs = [{ id: "dash", label: "Dashboard" }, { id: "budgets", label: "Crop Budgets" }, ...d.marketingGroups.map(g => ({ id: "mkt_" + g.id, label: g.name })), { id: "tickets", label: "Grain Tickets" }, { id: "rents", label: "Cash Rents" }, { id: "capital", label: "Capital Plan" }, { id: "inventory", label: "Inventory" }];
 
   return <div style={s.app}>
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -1212,6 +1364,7 @@ export default function App() {
       {tab === "tickets" && <TicketsTab d={d} upd={st.upd} />}
       {tab === "rents" && <RentsTab d={d} upd={st.upd} />}
       {tab === "capital" && <CapitalTab d={d} upd={st.upd} />}
+      {tab === "inventory" && <InventoryTab d={d} upd={st.upd} />}
     </main>
   </div>;
 }
