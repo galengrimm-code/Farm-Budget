@@ -480,10 +480,12 @@ function MktTab({ d, upd, gid }) {
   const u = (fn) => upd(p => { fn(p); return p; });
   const cts = d.contracts[gid] || []; const prod = d.crops.filter(c => g.cropIds.includes(c.id)).reduce((a, c) => a + c.acres * c.budgetYield, 0);
   const tU = cts.reduce((a, c) => a + c.units, 0), tD = cts.reduce((a, c) => a + c.units * c.cash, 0), pct = prod > 0 ? (tU/prod)*100 : 0;
+  const tF = cts.reduce((a, c) => a + c.units * (c.futures || 0), 0), tB = cts.reduce((a, c) => a + c.units * (c.basis || 0), 0);
   let bal = prod;
   return <div>
     <div style={s.title}>{g.name} Marketing Plan</div>
-    <div style={{ ...s.grid(4), marginBottom: 24 }}><Stat label="Production" value={fmt(prod)+" bu"} /><Stat label="Contracted" value={fmt(tU)+" bu"} sub={`${pct.toFixed(1)}% sold`} color={g.color} /><Stat label="Avg Price" value={tU>0?fmtD(tD/tU):"—"} /><Stat label="Revenue" value={fmtK(tD)} sub={`Rem: ${fmt(prod-tU)} bu`} /></div>
+    <div style={{ ...s.grid(3), marginBottom: 24 }}><Stat label="Production" value={fmt(prod)+" bu"} /><Stat label="Contracted" value={fmt(tU)+" bu"} sub={`${pct.toFixed(1)}% sold`} color={g.color} /><Stat label="Revenue" value={fmtK(tD)} sub={`Rem: ${fmt(prod-tU)} bu`} /></div>
+    <div style={{ ...s.grid(3), marginBottom: 24 }}><Stat label="Avg Cash Price" value={tU>0?fmtD(tD/tU):"—"} /><Stat label="Avg Futures" value={tU>0?fmtD(tF/tU):"—"} /><Stat label="Avg Basis" value={tU>0?fmtD(tB/tU):"—"} color={tU>0&&(tB/tU)<0?C.red:C.green} /></div>
     <div style={s.card}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}><span style={{ fontWeight: 600 }}>Contracts</span><button style={{ ...s.btn, ...s.btnP }} onClick={() => u(p => { if(!p.contracts[gid]) p.contracts[gid]=[]; const mx = p.contracts[gid].reduce((m,c)=>Math.max(m,c.id),0); p.contracts[gid].push({id:mx+1,desc:"New",delDate:"",units:0,cash:0,basis:0,futures:0,delivered:false}); })}>+ Add</button></div>
     <table style={s.tbl}><thead><tr><th style={s.th}>#</th><th style={{ ...s.th, minWidth: 200 }}>Description</th><th style={s.th}>Del.</th><th style={s.thR}>Units</th><th style={s.thR}>Cash</th><th style={s.thR}>Basis</th><th style={s.thR}>Futures</th><th style={s.thR}>$ Amt</th><th style={s.thR}>Balance</th><th style={s.th}>Status</th><th></th></tr></thead><tbody>
       <tr><td colSpan={8} style={{ ...s.td, color: C.muted }}>Beginning Balance</td><td style={{ ...s.tdR, fontWeight: 600, color: g.color }}>{fmt(prod)}</td><td colSpan={2}></td></tr>
