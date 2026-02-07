@@ -461,7 +461,7 @@ function BudgetsTab({ d, upd }) {
           <td style={s.tdR}><E value={p.isPerLb ? p.pricePerLb : p.pricePerTon} onSave={v => u(x => { if (p.isPerLb) x.fertProducts[pi].pricePerLb = v; else x.fertProducts[pi].pricePerTon = v; })} /></td>
           <td style={s.td}><E value={p.unit} f="text" onSave={v => u(x => { x.fertProducts[pi].unit = v; })} prefix="" style={{ fontSize: 11 }} /></td>
           <td style={s.tdR}><E value={p.mult} onSave={v => u(x => { x.fertProducts[pi].mult = v; })} dec={2} prefix="" f="plain" /></td>
-          {d.crops.map(c => <td key={c.id} style={s.tdR}><E value={p.rates[c.id] || 0} onSave={v => u(x => { x.fertProducts[pi].rates[c.id] = v; })} dec={0} prefix="" f="int" /></td>)}
+          {d.crops.map(c => <td key={c.id} style={s.tdR}><E value={p.rates?.[c.id] || 0} onSave={v => u(x => { if (!x.fertProducts[pi].rates) x.fertProducts[pi].rates = {}; x.fertProducts[pi].rates[c.id] = v; })} dec={0} prefix="" f="int" /></td>)}
           <td style={s.td}><button onClick={() => u(x => { x.fertProducts.splice(pi, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
         {(d.fertFlats||[]).map((f, fi) => <tr key={f.id}><td style={s.td}><E value={f.name} f="text" onSave={v => u(x => { x.fertFlats[fi].name = v; })} prefix="" /><span style={{ fontSize: 10, color: C.muted, marginLeft: 4 }}>(flat)</span></td>
           <td colSpan={3} style={s.tdR}><E value={f.total} onSave={v => u(x => { x.fertFlats[fi].total = v; })} dec={0} /><span style={{ fontSize: 10, color: C.muted, marginLeft: 4 }}>total</span></td>
@@ -474,7 +474,7 @@ function BudgetsTab({ d, upd }) {
     <Sec title="Herbicide Passes" emoji="🌿" btext={`Avg ${fmtD(d.crops.reduce((a,c) => a + calcHerb(d,c.id)*c.acres, 0)/t)}/ac`}>
       <table style={s.tbl}><thead><tr><th style={s.th}>Pass</th><th style={s.thR}>$/ac</th>{d.crops.map(c => <th key={c.id} style={s.thR}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6 }}>Apply</span></th>)}<th></th></tr></thead><tbody>
         {(d.herbPasses||[]).map((p, pi) => <tr key={p.id}><td style={s.td}><E value={p.name} f="text" onSave={v => u(x => { x.herbPasses[pi].name = v; })} prefix="" /></td><td style={s.tdR}><E value={p.costPerAc} onSave={v => u(x => { x.herbPasses[pi].costPerAc = v; })} /></td>
-          {d.crops.map(c => <td key={c.id} style={s.tdR}><E value={p.flags[c.id] || 0} onSave={v => u(x => { x.herbPasses[pi].flags[c.id] = v; })} dec={1} prefix="" f="plain" /></td>)}
+          {d.crops.map(c => <td key={c.id} style={s.tdR}><E value={p.flags?.[c.id] || 0} onSave={v => u(x => { if (!x.herbPasses[pi].flags) x.herbPasses[pi].flags = {}; x.herbPasses[pi].flags[c.id] = v; })} dec={1} prefix="" f="plain" /></td>)}
           <td style={s.td}><button onClick={() => u(x => { x.herbPasses.splice(pi, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
         <tr style={{ background: "rgba(217,119,6,0.06)" }}><td colSpan={2} style={{ ...s.td, fontWeight: 700, color: C.amber }}>Total/ac</td>{d.crops.map(c => <td key={c.id} style={{ ...s.tdR, fontWeight: 700, color: C.amber }}><Calc value={calcHerb(d, c.id)} /></td>)}<td></td></tr>
       </tbody></table><div style={{ display: "flex", gap: 16, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}><button style={{ ...s.btn, ...s.btnP }} onClick={() => u(p => { p.herbPasses.push({ id: "h"+Date.now(), name: "New Pass", costPerAc: 0, flags: {} }); })}>+ Add Pass</button><span style={{ fontSize: 12, color: C.muted }}>Herb Reconcile (flat $):</span><E value={d.herbReconcile || 0} onSave={v => u(p => { p.herbReconcile = v; })} dec={0} /><span style={{ fontSize: 11, color: C.muted }}>({t > 0 ? fmtD((d.herbReconcile||0)/t) : "—"}/ac)</span></div></Sec>
@@ -482,7 +482,7 @@ function BudgetsTab({ d, upd }) {
     <Sec title="Insecticide/Fungicide" emoji="🐛">
       <table style={s.tbl}><thead><tr><th style={s.th}>Product</th><th style={s.thR}>$/ac</th>{d.crops.map(c => <th key={c.id} style={s.thR}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6 }}>Apply</span></th>)}<th></th></tr></thead><tbody>
         {(d.insectProducts||[]).map((p, pi) => <tr key={p.id}><td style={s.td}><E value={p.name} f="text" onSave={v => u(x => { x.insectProducts[pi].name = v; })} prefix="" /></td><td style={s.tdR}><E value={p.costPerAc} onSave={v => u(x => { x.insectProducts[pi].costPerAc = v; })} /></td>
-          {d.crops.map(c => <td key={c.id} style={s.tdR}><E value={p.flags[c.id] || 0} onSave={v => u(x => { x.insectProducts[pi].flags[c.id] = v; })} dec={0} prefix="" f="int" /></td>)}
+          {d.crops.map(c => <td key={c.id} style={s.tdR}><E value={p.flags?.[c.id] || 0} onSave={v => u(x => { if (!x.insectProducts[pi].flags) x.insectProducts[pi].flags = {}; x.insectProducts[pi].flags[c.id] = v; })} dec={0} prefix="" f="int" /></td>)}
           <td style={s.td}><button onClick={() => u(x => { x.insectProducts.splice(pi, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
         <tr style={{ background: "rgba(217,119,6,0.06)" }}><td colSpan={2} style={{ ...s.td, fontWeight: 700, color: C.amber }}>Total/ac</td>{d.crops.map(c => <td key={c.id} style={{ ...s.tdR, fontWeight: 700, color: C.amber }}><Calc value={calcInsect(d, c.id)} /></td>)}<td></td></tr>
       </tbody></table><button style={{ ...s.btn, ...s.btnP, marginTop: 8 }} onClick={() => u(p => { p.insectProducts.push({ id: "ip"+Date.now(), name: "New Product", costPerAc: 0, flags: {} }); })}>+ Add Product</button></Sec>
@@ -503,7 +503,7 @@ function BudgetsTab({ d, upd }) {
           <td style={s.td}><button onClick={() => u(p => { p.overheadItems.splice(oi, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
       </tbody></table><button style={{ ...s.btn, ...s.btnP, marginTop: 8 }} onClick={() => u(p => { p.overheadItems.push({ id: "o"+Date.now(), name: "New Item", total: 0, group: "Other" }); })}>+ Add Item</button>
       <div style={{ marginTop: 16, fontWeight: 700, fontSize: 13 }}>Rent per Crop ($/ac)</div>
-      <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>{d.crops.map((c, i) => <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6, fontSize: 12 }}>{c.name}:</span><E value={d.rentPerCrop[c.id]} onSave={v => u(p => { p.rentPerCrop[c.id] = v; })} /></div>)}</div></Sec>
+      <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>{d.crops.map((c, i) => <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6, fontSize: 12 }}>{c.name}:</span><E value={d.rentPerCrop?.[c.id] || 0} onSave={v => u(p => { if (!p.rentPerCrop) p.rentPerCrop = {}; p.rentPerCrop[c.id] = v; })} /></div>)}</div></Sec>
   </div>;
 }
 
