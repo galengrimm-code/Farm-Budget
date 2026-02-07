@@ -1366,7 +1366,7 @@ export default function App() {
         <div style={{ fontSize: 11, color: st.ss==="saved"?C.green:st.ss==="saving"?C.amber:C.red }}>{st.ss==="saved"?"✓ Saved":st.ss==="saving"?"Saving...":"Unsaved"}</div>
         <div style={{ display: "flex", gap: 4, background: C.border, borderRadius: 8, padding: 4 }}>{st.years.map(yr => <button key={yr} style={s.tog(yr===st.yr)} onClick={() => st.loadYr(yr)}>{yr}</button>)}</div>
         <button style={{ ...s.btn, ...s.btnP }} onClick={() => { setNewYr(String(st.yr + 1)); setShowYM(true); }}>+ New Year</button>
-        {st.years.length < 5 && <button style={{ ...s.btn, background: "#7C3AED", color: "#fff" }} onClick={() => { if (confirm("Seed historical data for 2020-2026? This will overwrite existing years.")) st.seedHistory(); }}>Seed History</button>}
+        <button style={{ ...s.btn, background: "#7C3AED", color: "#fff" }} onClick={() => { if (confirm("Seed historical data for 2020-2026? This will overwrite existing years.")) st.seedHistory(); }}>Seed History</button>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 8 }}>
           <div style={{ fontSize: 12, color: C.muted }}>{auth.user.email}</div>
           <button style={{ ...s.btn, ...s.btnG, padding: "4px 10px", fontSize: 11 }} onClick={auth.signOut}>Sign Out</button>
