@@ -1364,7 +1364,7 @@ export default function App() {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ fontSize: 11, color: st.ss==="saved"?C.green:st.ss==="saving"?C.amber:C.red }}>{st.ss==="saved"?"✓ Saved":st.ss==="saving"?"Saving...":"Unsaved"}</div>
-        <div style={{ display: "flex", gap: 4, background: C.border, borderRadius: 8, padding: 4 }}>{st.years.map(yr => <button key={yr} style={s.tog(yr===st.yr)} onClick={() => st.loadYr(yr)}>{yr}</button>)}</div>
+        <div style={{ display: "flex", gap: 4, background: C.border, borderRadius: 8, padding: 4 }}>{[...st.years].sort((a,b)=>a-b).map(yr => <button key={yr} style={s.tog(yr===st.yr)} onClick={() => st.loadYr(yr)}>{yr}</button>)}</div>
         <button style={{ ...s.btn, ...s.btnP }} onClick={() => { setNewYr(String(st.yr + 1)); setShowYM(true); }}>+ New Year</button>
         <button style={{ ...s.btn, background: "#7C3AED", color: "#fff" }} onClick={() => { if (confirm("Seed historical data for 2020-2026? This will overwrite existing years.")) st.seedHistory(); }}>Seed History</button>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 8 }}>
