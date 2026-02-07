@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "./supabase";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DATA MODEL — fully dynamic, no hardcoded crop/product lists
@@ -254,18 +255,95 @@ function Sec({ title, emoji, children, btext, open: defOpen = false }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// STORAGE HOOK
+// AUTH HOOK
 // ═══════════════════════════════════════════════════════════════════════════
-function useStorage() {
+function useAuth() {
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+  const signIn = () => supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.origin } });
+  const signOut = () => supabase.auth.signOut();
+  return { user, authLoading, signIn, signOut };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STORAGE HOOK (Supabase)
+// ═══════════════════════════════════════════════════════════════════════════
+function useStorage(userId) {
   const [years, setYears] = useState([]); const [yr, setYr] = useState(2025); const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true); const [ss, setSs] = useState("saved"); const tmr = useRef(null);
-  const save = useCallback(async (d) => { setSs("saving"); try { await window.storage.set(`pf:${d.year}`, JSON.stringify(d)); setSs("saved"); } catch { setSs("error"); } }, []);
+
+  const save = useCallback(async (d) => {
+    if (!userId) return;
+    setSs("saving");
+    try {
+      const { error } = await supabase.from("farm_data").upsert(
+        { user_id: userId, year: d.year, data: d, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,year" }
+      );
+      if (error) throw error;
+      setSs("saved");
+    } catch { setSs("error"); }
+  }, [userId]);
+
   const dsave = useCallback((d) => { setSs("unsaved"); if (tmr.current) clearTimeout(tmr.current); tmr.current = setTimeout(() => save(d), 1200); }, [save]);
-  const loadYrs = useCallback(async () => { try { const r = await window.storage.list("pf:"); if (r?.keys?.length) { const y = r.keys.map(k => parseInt(k.replace("pf:", ""))).filter(y => !isNaN(y)).sort((a, b) => b - a); setYears(y); return y; } } catch {} return []; }, []);
-  const loadYr = useCallback(async (y) => { try { const r = await window.storage.get(`pf:${y}`); if (r?.value) { const p = JSON.parse(r.value); setData(p); setYr(y); return p; } } catch {} const d = defaultData(y); setData(d); setYr(y); return d; }, []);
+
+  const loadYrs = useCallback(async () => {
+    if (!userId) return [];
+    try {
+      const { data: rows, error } = await supabase.from("farm_data").select("year").eq("user_id", userId).order("year", { ascending: false });
+      if (error) throw error;
+      if (rows?.length) { const y = rows.map(r => r.year); setYears(y); return y; }
+    } catch {}
+    return [];
+  }, [userId]);
+
+  const loadYr = useCallback(async (y) => {
+    if (!userId) return null;
+    try {
+      const { data: row, error } = await supabase.from("farm_data").select("data").eq("user_id", userId).eq("year", y).single();
+      if (error) throw error;
+      if (row?.data) { setData(row.data); setYr(y); return row.data; }
+    } catch {}
+    const d = defaultData(y); setData(d); setYr(y); return d;
+  }, [userId]);
+
   const upd = useCallback((fn) => { setData(prev => { const n = fn(JSON.parse(JSON.stringify(prev))); dsave(n); return n; }); }, [dsave]);
-  const copyYr = useCallback(async (from, to) => { let src; try { const r = await window.storage.get(`pf:${from}`); src = r?.value ? JSON.parse(r.value) : defaultData(from); } catch { src = defaultData(from); } const cp = JSON.parse(JSON.stringify(src)); cp.year = to; cp.crops.forEach(c => { c.actualYield = null; c.actualPrice = null; }); cp.contracts = {}; cp.marketingGroups.forEach(g => { cp.contracts[g.id] = []; }); cp.grainTickets = []; await window.storage.set(`pf:${to}`, JSON.stringify(cp)); setYears(p => [...new Set([to, ...p])].sort((a, b) => b - a)); setData(cp); setYr(to); }, []);
-  useEffect(() => { (async () => { setLoading(true); const y = await loadYrs(); if (y.length) await loadYr(y[0]); else { const d = defaultData(2025); await save(d); setYears([2025]); setData(d); } setLoading(false); })(); }, []);
+
+  const copyYr = useCallback(async (from, to) => {
+    if (!userId) return;
+    let src;
+    try {
+      const { data: row } = await supabase.from("farm_data").select("data").eq("user_id", userId).eq("year", from).single();
+      src = row?.data || defaultData(from);
+    } catch { src = defaultData(from); }
+    const cp = JSON.parse(JSON.stringify(src)); cp.year = to;
+    cp.crops.forEach(c => { c.actualYield = null; c.actualPrice = null; });
+    cp.contracts = {}; cp.marketingGroups.forEach(g => { cp.contracts[g.id] = []; }); cp.grainTickets = [];
+    await save(cp);
+    setYears(p => [...new Set([to, ...p])].sort((a, b) => b - a)); setData(cp); setYr(to);
+  }, [userId, save]);
+
+  useEffect(() => {
+    if (!userId) { setLoading(false); return; }
+    (async () => {
+      setLoading(true);
+      const y = await loadYrs();
+      if (y.length) await loadYr(y[0]);
+      else { const d = defaultData(2025); await save(d); setYears([2025]); setData(d); }
+      setLoading(false);
+    })();
+  }, [userId]);
+
   return { years, yr, data, loading, ss, loadYr, upd, copyYr };
 }
 
@@ -938,11 +1016,31 @@ function RentsTab({ d, upd }) {
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════
 export default function App() {
-  const st = useStorage();
+  const auth = useAuth();
+  const st = useStorage(auth.user?.id);
   const [tab, setTab] = useState("dash");
   const [showYM, setShowYM] = useState(false);
   const [newYr, setNewYr] = useState("");
-  if (st.loading) return <div style={{ ...s.app, display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><div style={{ textAlign: "center" }}><div style={{ fontSize: 32, fontWeight: 800, color: C.amber }}>PF</div><div style={{ color: C.muted }}>Loading...</div></div></div>;
+
+  // Auth loading
+  if (auth.authLoading) return <div style={{ ...s.app, display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><div style={{ textAlign: "center" }}><img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 64, height: 64, borderRadius: 12, marginBottom: 16 }} /><div style={{ color: C.muted }}>Loading...</div></div></div>;
+
+  // Not signed in
+  if (!auth.user) return <div style={{ ...s.app, display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <div style={{ textAlign: "center" }}>
+      <img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 80, height: 80, borderRadius: 16, marginBottom: 20 }} />
+      <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>Precision Farms</div>
+      <div style={{ fontSize: 14, color: C.muted, marginBottom: 32, textTransform: "uppercase", letterSpacing: "0.05em" }}>Crop Budget Dashboard</div>
+      <button onClick={auth.signIn} style={{ ...s.btn, ...s.btnP, padding: "14px 32px", fontSize: 16, borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 10 }}>
+        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.0 24.0 0 0 0 0 21.56l7.98-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Sign in with Google
+      </button>
+    </div>
+  </div>;
+
+  // Data loading
+  if (st.loading) return <div style={{ ...s.app, display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><div style={{ textAlign: "center" }}><img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 64, height: 64, borderRadius: 12, marginBottom: 16 }} /><div style={{ color: C.muted }}>Loading data...</div></div></div>;
   if (!st.data) return null;
   const d = st.data;
   const tabs = [{ id: "dash", label: "Dashboard" }, { id: "budgets", label: "Crop Budgets" }, ...d.marketingGroups.map(g => ({ id: "mkt_" + g.id, label: g.name })), { id: "tickets", label: "🎫 Grain Tickets" }, { id: "rents", label: "Cash Rents" }];
@@ -958,6 +1056,10 @@ export default function App() {
         <div style={{ fontSize: 11, color: st.ss==="saved"?C.green:st.ss==="saving"?C.amber:C.red }}>{st.ss==="saved"?"✓ Saved":st.ss==="saving"?"Saving...":"Unsaved"}</div>
         <div style={{ display: "flex", gap: 4, background: C.border, borderRadius: 8, padding: 4 }}>{st.years.map(yr => <button key={yr} style={s.tog(yr===st.yr)} onClick={() => st.loadYr(yr)}>{yr}</button>)}</div>
         <button style={{ ...s.btn, ...s.btnP }} onClick={() => { setNewYr(String(st.yr + 1)); setShowYM(true); }}>+ New Year</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 8 }}>
+          <div style={{ fontSize: 12, color: C.muted }}>{auth.user.email}</div>
+          <button style={{ ...s.btn, ...s.btnG, padding: "4px 10px", fontSize: 11 }} onClick={auth.signOut}>Sign Out</button>
+        </div>
       </div>
     </header>
     {showYM && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowYM(false)}>
