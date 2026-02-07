@@ -423,8 +423,8 @@ function Dash({ d }) {
       <Stat label="Total Costs" value={fmtK(tC)} sub={`${fmtD(tC/t)}/ac`} color={C.red} />
       <Stat label="Net Returns" value={fmtK(net)} sub={`${fmtD(net/t)}/ac`} color={net>=0?C.green:C.red} />
     </div>
-    <div style={{ ...s.card, marginBottom: 24 }}><div style={s.title}>Crop P&L Summary</div>
-      <table style={s.tbl}><thead><tr><th style={s.th}>Crop</th><th style={s.thR}>Acres</th><th style={s.thR}>Income/ac</th><th style={s.thR}>Cost/ac</th><th style={s.thR}>Return/ac</th><th style={s.thR}>Total Net</th></tr></thead>
+    <div style={{ ...s.card, marginBottom: 24, overflowX: "auto" }}><div style={s.title}>Crop P&L Summary</div>
+      <table style={s.tbl}><thead><tr><th style={{ ...s.th, minWidth: 120 }}>Crop</th><th style={{ ...s.thR, minWidth: 70 }}>Acres</th><th style={{ ...s.thR, minWidth: 90 }}>Income/ac</th><th style={{ ...s.thR, minWidth: 80 }}>Cost/ac</th><th style={{ ...s.thR, minWidth: 90 }}>Return/ac</th><th style={{ ...s.thR, minWidth: 90 }}>Total Net</th></tr></thead>
       <tbody>{d.crops.map(c => { const i = cropIncome(d, c), co = cropCost(d, c.id), r = i - co; return <tr key={c.id}><td style={s.td}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 8 }}>{c.name}</span></td><td style={s.tdR}>{fmt(c.acres)}</td><td style={s.tdR}>{fmtD(i)}</td><td style={s.tdR}>{fmtD(co)}</td><td style={{ ...s.tdR, color: r>=0?C.green:C.red, fontWeight: 600 }}>{fmtD(r)}</td><td style={{ ...s.tdR, color: r>=0?C.green:C.red }}>{fmtK(r * c.acres)}</td></tr>; })}</tbody></table>
     </div>
     <div style={s.card}><div style={s.title}>Marketing Position</div>
@@ -1388,20 +1388,18 @@ export default function App() {
   return <div style={s.app}>
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <header style={s.hdr}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 4, background: C.border, borderRadius: 8, padding: 4, overflowX: "auto" }}>{[...st.years].sort((a,b)=>a-b).map(yr => <button key={yr} style={s.tog(yr===st.yr)} onClick={() => st.loadYr(yr)}>{yr}</button>)}</div>
-        <button style={{ ...s.btn, ...s.btnP }} onClick={() => { setNewYr(String(st.yr + 1)); setShowYM(true); }}>+ Year</button>
-        <button style={{ ...s.btn, background: "#7C3AED", color: "#fff", fontSize: 12, padding: "6px 12px" }} onClick={() => { if (confirm("Seed historical data for 2020-2026? This will overwrite existing years.")) st.seedHistory(); }}>Seed</button>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "flex-end", flex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 42, height: 42, borderRadius: 8 }} />
-          <div><div style={{ fontSize: 22, fontWeight: 700 }}>Precision Farms</div><div style={{ fontSize: 13, color: C.muted, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Crop Budget Dashboard</div></div>
-        </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1 }}>
+        <img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 52, height: 52, borderRadius: 10 }} />
+        <div style={{ flex: 1 }}><div style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.01em" }}>Precision Farms</div><div style={{ fontSize: 15, color: C.muted, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>Crop Budget Dashboard</div></div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ fontSize: 11, color: st.ss==="saved"?C.green:st.ss==="saving"?C.amber:C.red }}>{st.ss==="saved"?"✓ Saved":st.ss==="saving"?"Saving...":"Unsaved"}</div>
           <button style={{ ...s.btn, ...s.btnG, padding: "4px 10px", fontSize: 11 }} onClick={auth.signOut}>Sign Out</button>
         </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap", overflowX: "auto", maxWidth: "100%" }}>
+        <div style={{ display: "flex", gap: 4, background: C.border, borderRadius: 8, padding: 4, overflowX: "auto", flexShrink: 0 }}>{[...st.years].sort((a,b)=>a-b).map(yr => <button key={yr} style={{ ...s.tog(yr===st.yr), flexShrink: 0 }} onClick={() => st.loadYr(yr)}>{yr}</button>)}</div>
+        <button style={{ ...s.btn, ...s.btnP, flexShrink: 0 }} onClick={() => { setNewYr(String(st.yr + 1)); setShowYM(true); }}>+ Year</button>
+        <button style={{ ...s.btn, background: "#7C3AED", color: "#fff", fontSize: 12, padding: "6px 12px", flexShrink: 0 }} onClick={() => { if (confirm("Seed historical data for 2020-2026? This will overwrite existing years.")) st.seedHistory(); }}>Seed</button>
       </div>
     </header>
     {showYM && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowYM(false)}>
