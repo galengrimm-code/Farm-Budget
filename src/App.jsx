@@ -155,21 +155,21 @@ const ta = (d) => d.crops.reduce((s, c) => s + (c.acres || 0), 0);
 const calcSeed = (c) => c.seedRate && c.seedBag ? (c.seedPrice / c.seedBag) * c.seedRate : 0;
 const calcFert = (d, cid) => {
   const t = ta(d); let total = 0;
-  d.fertProducts.forEach(p => {
+  (d.fertProducts || []).forEach(p => {
     const lbs = p.rates?.[cid] || 0; if (!lbs) return;
     const m = p.mult || 1;
-    total += p.isPerLb ? lbs * (p.pricePerLb || 0) : (p.pricePerTon / 2000) * lbs * m;
+    total += p.isPerLb ? lbs * (p.pricePerLb || 0) : ((p.pricePerTon || 0) / 2000) * lbs * m;
   });
-  if (t > 0) d.fertFlats.forEach(f => { total += (f.total || 0) / t; });
+  if (t > 0) (d.fertFlats || []).forEach(f => { total += (f.total || 0) / t; });
   return total;
 };
 const calcHerb = (d, cid) => {
-  const t = ta(d); 
-  let total = d.herbPasses.reduce((s, p) => s + (p.flags?.[cid] || 0) * p.costPerAc, 0);
+  const t = ta(d);
+  let total = (d.herbPasses || []).reduce((s, p) => s + (p.flags?.[cid] || 0) * (p.costPerAc || 0), 0);
   if (t > 0 && d.herbReconcile) total += (d.herbReconcile || 0) / t;
   return total;
 };
-const calcInsect = (d, cid) => d.insectProducts.reduce((s, p) => s + (p.flags?.[cid] || 0) * p.costPerAc, 0);
+const calcInsect = (d, cid) => (d.insectProducts || []).reduce((s, p) => s + (p.flags?.[cid] || 0) * (p.costPerAc || 0), 0);
 const calcIrr = (d, c) => (c.irrInches || 0) * (d.irrCostPerInch || 0);
 const calcDrying = (c) => (c.budgetYield || 0) * (c.dryingPerBu || 0);
 
@@ -205,7 +205,7 @@ function getLines(d, cid) {
     { key: "interest", label: "Interest on ½ Nonland", val: calcOverhead(d, cid, "Interest") },
   ];
 }
-const cropIncome = (d, c) => c.budgetYield * c.budgetPrice + d.incomeItems.reduce((s, i) => s + (i.perAc || 0), 0);
+const cropIncome = (d, c) => (c.budgetYield || 0) * (c.budgetPrice || 0) + (d.incomeItems || []).reduce((s, i) => s + (i.perAc || 0), 0);
 const cropCost = (d, cid) => getLines(d, cid).reduce((s, l) => s + l.val, 0);
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -399,7 +399,7 @@ function Dash({ d }) {
       <tbody>{d.crops.map(c => { const i = cropIncome(d, c), co = cropCost(d, c.id), r = i - co; return <tr key={c.id}><td style={s.td}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 8 }}>{c.name}</span></td><td style={s.tdR}>{fmt(c.acres)}</td><td style={s.tdR}>{fmtD(i)}</td><td style={s.tdR}>{fmtD(co)}</td><td style={{ ...s.tdR, color: r>=0?C.green:C.red, fontWeight: 600 }}>{fmtD(r)}</td><td style={{ ...s.tdR, color: r>=0?C.green:C.red }}>{fmtK(r * c.acres)}</td></tr>; })}</tbody></table>
     </div>
     <div style={s.card}><div style={s.title}>Marketing Position</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>{d.marketingGroups.map(g => {
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>{(d.marketingGroups||[]).map(g => {
         const prod = d.crops.filter(c => g.cropIds.includes(c.id)).reduce((a, c) => a + c.acres * c.budgetYield, 0);
         const con = (d.contracts[g.id] || []).reduce((a, c) => a + c.units, 0);
         const pct = prod > 0 ? (con / prod) * 100 : 0;
@@ -434,7 +434,7 @@ function BudgetsTab({ d, upd }) {
         <tr><td colSpan={d.crops.length+1} style={{ ...s.td, fontWeight: 700, color: C.green, fontSize: 11, textTransform: "uppercase", padding: "12px 10px 4px" }}>Income</td></tr>
         <tr><td style={{ ...s.td, paddingLeft: 18 }}>Yield (bu/ac)</td>{d.crops.map((c, i) => <td key={c.id} style={s.tdR}><E value={c.budgetYield} onSave={v => u(p => { p.crops[i].budgetYield = v; })} dec={1} prefix="" f="plain" /></td>)}</tr>
         <tr><td style={{ ...s.td, paddingLeft: 18 }}>Price/bu</td>{d.crops.map((c, i) => <td key={c.id} style={s.tdR}><E value={c.budgetPrice} onSave={v => u(p => { p.crops[i].budgetPrice = v; })} dec={3} /></td>)}</tr>
-        {d.incomeItems.map((item, ii) => <tr key={item.id}><td style={{ ...s.td, paddingLeft: 18 }}><E value={item.name} f="text" onSave={v => u(p => { p.incomeItems[ii].name = v; })} prefix="" /></td>{d.crops.map(c => <td key={c.id} style={s.tdR}><E value={item.perAc} onSave={v => u(p => { p.incomeItems[ii].perAc = v; })} /></td>)}</tr>)}
+        {(d.incomeItems||[]).map((item, ii) => <tr key={item.id}><td style={{ ...s.td, paddingLeft: 18 }}><E value={item.name} f="text" onSave={v => u(p => { p.incomeItems[ii].name = v; })} prefix="" /></td>{d.crops.map(c => <td key={c.id} style={s.tdR}><E value={item.perAc} onSave={v => u(p => { p.incomeItems[ii].perAc = v; })} /></td>)}</tr>)}
         <tr><td style={{ ...s.td, paddingLeft: 18 }}><button style={{ ...s.btn, ...s.btnG, fontSize: 11, padding: "2px 8px" }} onClick={() => u(p => { p.incomeItems.push({ id: "i" + Date.now(), name: "New Item", perAc: 0 }); })}>+ income item</button></td></tr>
         <tr style={{ background: "rgba(16,185,129,0.08)" }}><td style={{ ...s.td, fontWeight: 700, color: C.green }}>Total Returns/ac</td>{d.crops.map(c => <td key={c.id} style={{ ...s.tdR, fontWeight: 700, color: C.green }}><Calc value={cropIncome(d, c)} /></td>)}</tr>
         <tr><td colSpan={d.crops.length+1} style={{ ...s.td, fontWeight: 700, color: C.red, fontSize: 11, textTransform: "uppercase", padding: "14px 10px 4px" }}>Expenses (calculated)</td></tr>
@@ -457,13 +457,13 @@ function BudgetsTab({ d, upd }) {
 
     <Sec title="Fertilizer & Lime" emoji="🧪" btext={`Avg ${fmtD(d.crops.reduce((a,c) => a + calcFert(d,c.id)*c.acres, 0)/t)}/ac`}>
       <table style={s.tbl}><thead><tr><th style={s.th}>Product</th><th style={s.thR}>Price</th><th style={s.th}>Unit</th><th style={s.thR}>Mult</th>{d.crops.map(c => <th key={c.id} style={s.thR}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6 }}>lbs</span></th>)}<th style={s.th}></th></tr></thead><tbody>
-        {d.fertProducts.map((p, pi) => <tr key={p.id}><td style={s.td}><E value={p.name} f="text" onSave={v => u(x => { x.fertProducts[pi].name = v; })} prefix="" /></td>
+        {(d.fertProducts||[]).map((p, pi) => <tr key={p.id}><td style={s.td}><E value={p.name} f="text" onSave={v => u(x => { x.fertProducts[pi].name = v; })} prefix="" /></td>
           <td style={s.tdR}><E value={p.isPerLb ? p.pricePerLb : p.pricePerTon} onSave={v => u(x => { if (p.isPerLb) x.fertProducts[pi].pricePerLb = v; else x.fertProducts[pi].pricePerTon = v; })} /></td>
           <td style={s.td}><E value={p.unit} f="text" onSave={v => u(x => { x.fertProducts[pi].unit = v; })} prefix="" style={{ fontSize: 11 }} /></td>
           <td style={s.tdR}><E value={p.mult} onSave={v => u(x => { x.fertProducts[pi].mult = v; })} dec={2} prefix="" f="plain" /></td>
           {d.crops.map(c => <td key={c.id} style={s.tdR}><E value={p.rates[c.id] || 0} onSave={v => u(x => { x.fertProducts[pi].rates[c.id] = v; })} dec={0} prefix="" f="int" /></td>)}
           <td style={s.td}><button onClick={() => u(x => { x.fertProducts.splice(pi, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
-        {d.fertFlats.map((f, fi) => <tr key={f.id}><td style={s.td}><E value={f.name} f="text" onSave={v => u(x => { x.fertFlats[fi].name = v; })} prefix="" /><span style={{ fontSize: 10, color: C.muted, marginLeft: 4 }}>(flat)</span></td>
+        {(d.fertFlats||[]).map((f, fi) => <tr key={f.id}><td style={s.td}><E value={f.name} f="text" onSave={v => u(x => { x.fertFlats[fi].name = v; })} prefix="" /><span style={{ fontSize: 10, color: C.muted, marginLeft: 4 }}>(flat)</span></td>
           <td colSpan={3} style={s.tdR}><E value={f.total} onSave={v => u(x => { x.fertFlats[fi].total = v; })} dec={0} /><span style={{ fontSize: 10, color: C.muted, marginLeft: 4 }}>total</span></td>
           {d.crops.map(c => <td key={c.id} style={{ ...s.tdR, color: C.muted, fontSize: 11 }}>{t > 0 ? fmtD((f.total || 0) / t) : "—"}</td>)}
           <td style={s.td}><button onClick={() => u(x => { x.fertFlats.splice(fi, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
@@ -473,7 +473,7 @@ function BudgetsTab({ d, upd }) {
 
     <Sec title="Herbicide Passes" emoji="🌿" btext={`Avg ${fmtD(d.crops.reduce((a,c) => a + calcHerb(d,c.id)*c.acres, 0)/t)}/ac`}>
       <table style={s.tbl}><thead><tr><th style={s.th}>Pass</th><th style={s.thR}>$/ac</th>{d.crops.map(c => <th key={c.id} style={s.thR}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6 }}>Apply</span></th>)}<th></th></tr></thead><tbody>
-        {d.herbPasses.map((p, pi) => <tr key={p.id}><td style={s.td}><E value={p.name} f="text" onSave={v => u(x => { x.herbPasses[pi].name = v; })} prefix="" /></td><td style={s.tdR}><E value={p.costPerAc} onSave={v => u(x => { x.herbPasses[pi].costPerAc = v; })} /></td>
+        {(d.herbPasses||[]).map((p, pi) => <tr key={p.id}><td style={s.td}><E value={p.name} f="text" onSave={v => u(x => { x.herbPasses[pi].name = v; })} prefix="" /></td><td style={s.tdR}><E value={p.costPerAc} onSave={v => u(x => { x.herbPasses[pi].costPerAc = v; })} /></td>
           {d.crops.map(c => <td key={c.id} style={s.tdR}><E value={p.flags[c.id] || 0} onSave={v => u(x => { x.herbPasses[pi].flags[c.id] = v; })} dec={1} prefix="" f="plain" /></td>)}
           <td style={s.td}><button onClick={() => u(x => { x.herbPasses.splice(pi, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
         <tr style={{ background: "rgba(217,119,6,0.06)" }}><td colSpan={2} style={{ ...s.td, fontWeight: 700, color: C.amber }}>Total/ac</td>{d.crops.map(c => <td key={c.id} style={{ ...s.tdR, fontWeight: 700, color: C.amber }}><Calc value={calcHerb(d, c.id)} /></td>)}<td></td></tr>
@@ -481,7 +481,7 @@ function BudgetsTab({ d, upd }) {
 
     <Sec title="Insecticide/Fungicide" emoji="🐛">
       <table style={s.tbl}><thead><tr><th style={s.th}>Product</th><th style={s.thR}>$/ac</th>{d.crops.map(c => <th key={c.id} style={s.thR}><span style={{ borderLeft: `3px solid ${c.color}`, paddingLeft: 6 }}>Apply</span></th>)}<th></th></tr></thead><tbody>
-        {d.insectProducts.map((p, pi) => <tr key={p.id}><td style={s.td}><E value={p.name} f="text" onSave={v => u(x => { x.insectProducts[pi].name = v; })} prefix="" /></td><td style={s.tdR}><E value={p.costPerAc} onSave={v => u(x => { x.insectProducts[pi].costPerAc = v; })} /></td>
+        {(d.insectProducts||[]).map((p, pi) => <tr key={p.id}><td style={s.td}><E value={p.name} f="text" onSave={v => u(x => { x.insectProducts[pi].name = v; })} prefix="" /></td><td style={s.tdR}><E value={p.costPerAc} onSave={v => u(x => { x.insectProducts[pi].costPerAc = v; })} /></td>
           {d.crops.map(c => <td key={c.id} style={s.tdR}><E value={p.flags[c.id] || 0} onSave={v => u(x => { x.insectProducts[pi].flags[c.id] = v; })} dec={0} prefix="" f="int" /></td>)}
           <td style={s.td}><button onClick={() => u(x => { x.insectProducts.splice(pi, 1); })} style={{ ...s.btn, ...s.btnD, padding: "2px 6px", fontSize: 10 }}>✕</button></td></tr>)}
         <tr style={{ background: "rgba(217,119,6,0.06)" }}><td colSpan={2} style={{ ...s.td, fontWeight: 700, color: C.amber }}>Total/ac</td>{d.crops.map(c => <td key={c.id} style={{ ...s.tdR, fontWeight: 700, color: C.amber }}><Calc value={calcInsect(d, c.id)} /></td>)}<td></td></tr>
@@ -1353,7 +1353,7 @@ export default function App() {
   if (st.loading) return <div style={{ ...s.app, display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><div style={{ textAlign: "center" }}><img src="/icon-192x192.png" alt="Precision Farms" style={{ width: 64, height: 64, borderRadius: 12, marginBottom: 16 }} /><div style={{ color: C.muted }}>Loading data...</div></div></div>;
   if (!st.data) return null;
   const d = st.data;
-  const tabs = [{ id: "dash", label: "Dashboard" }, { id: "budgets", label: "Crop Budgets" }, ...d.marketingGroups.map(g => ({ id: "mkt_" + g.id, label: g.name })), { id: "tickets", label: "Grain Tickets" }, { id: "rents", label: "Cash Rents" }, { id: "capital", label: "Capital Plan" }, { id: "inventory", label: "Inventory" }];
+  const tabs = [{ id: "dash", label: "Dashboard" }, { id: "budgets", label: "Crop Budgets" }, ...(d.marketingGroups||[]).map(g => ({ id: "mkt_" + g.id, label: g.name })), { id: "tickets", label: "Grain Tickets" }, { id: "rents", label: "Cash Rents" }, { id: "capital", label: "Capital Plan" }, { id: "inventory", label: "Inventory" }];
 
   return <div style={s.app}>
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -1384,7 +1384,7 @@ export default function App() {
     <main style={s.main}>
       {tab === "dash" && <Dash d={d} />}
       {tab === "budgets" && <BudgetsTab d={d} upd={st.upd} />}
-      {d.marketingGroups.map(g => tab === "mkt_"+g.id && <MktTab key={g.id} d={d} upd={st.upd} gid={g.id} />)}
+      {(d.marketingGroups||[]).map(g => tab === "mkt_"+g.id && <MktTab key={g.id} d={d} upd={st.upd} gid={g.id} />)}
       {tab === "tickets" && <TicketsTab d={d} upd={st.upd} />}
       {tab === "rents" && <RentsTab d={d} upd={st.upd} />}
       {tab === "capital" && <CapitalTab d={d} upd={st.upd} />}
